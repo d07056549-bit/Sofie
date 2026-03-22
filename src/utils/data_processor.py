@@ -29,6 +29,14 @@ class SofieDataEngine:
         except:
             return 1.0
 
+    def get_at_risk_countries(self):
+        # Look at the 'fatalities' file
+        path = os.path.join(self.root, "Conflict/ACLED/number_of_reported_fatalities_by_country-year_as-of-13Mar2026.xlsx")
+        df = pd.read_excel(path)
+        # Grab any country with > 500 fatalities in 2026
+        high_risk = df[df['2026'] > 500]['Country'].tolist()
+        return high_risk
+
     def run_all(self):
         return {
             "fatalities": self.get_conflict_pulse(),
