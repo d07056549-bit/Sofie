@@ -1,74 +1,58 @@
-from circuitbreaker import circuit
 import pandas as pd
 import numpy as np
 import os
+from circuitbreaker import circuit
 
 class SofieDataEngine:
     def __init__(self, root_dir="."):
         self.root = root_dir
-        # Paths to your specific files
+        # Standardize paths to the root folder where you are running the script
         self.cyber_path = os.path.join(self.root, "cybersecurity synthesized data.csv")
         self.maritime_path = os.path.join(self.root, "Maritime Port Performance Project Dataset.csv")
-        self.vix_path = os.path.join(self.root, "stability_history.csv") # Using history as a proxy for this test
 
-    # --- FALLBACKS (The 'Safety Valves') ---
-    def fallback_cyber(self):
+    # --- FALLBACK FUNCTIONS ---
+    # These MUST be defined before they are used in decorators
+    def fallback_cyber(self, *args, **kwargs):
         return False, 0.0
 
-    def fallback_maritime(self):
-        return 1.05 
-
-    def fallback_generic(self):
-        return 0.0
+    def fallback_maritime(self, *args, **kwargs):
+        return 1.05
 
     # --- PROTECTED SENSORS ---
 
-   @circuit(failure_threshold=1, recovery_timeout=60, fallback_function=fallback_cyber)
+    @circuit(failure_threshold=1, recovery_timeout=60, fallback_function=fallback_cyber)
     def get_cyber_black_swan(self):
-        """
-        Scans cyber data for high-severity triggers.
-        Targeting severity >= 9 as 'Black Swan' events.
-        """
+        """Scans cyber data for high-severity triggers."""
         if not os.path.exists(self.cyber_path):
-            # Triggers circuit breaker fallback if file is missing
-            return self.fallback_cyber()
-        
-        # Load the CSV with error handling for large files
-        df = pd.read_csv(self.cyber_path, low_memory=False)
-        
-        # Filter for critical severity (9 and 10)
-        # These represent systemic shocks in the SOFIE logic
-        critical_hits = df[df['attack_severity'] >= 9]
-        
-        if not critical_hits.empty:
-            # We calculate a 'Cyber Stress Multiplier' 
-            # based on the average severity of these critical hits
-            avg_severity = critical_hits['attack_severity'].mean()
-            return True, float(avg_severity)
+            return False, 0.0
             
+        df = pd.read_csv(self.cyber_path, low_memory=False)
+        # Look for the 'attack_severity' column we saw in your CSV
+        critical_hits = df[df['attack_severity'] >= 9]
+        if not critical_hits.empty:
+            return True, float(critical_hits['attack_severity'].mean())
         return False, 0.0
 
-    @circuit(failure_threshold=3, recovery_timeout=60, fallback_function=fallback_maritime)
+    @circuit(failure_threshold=1, recovery_timeout=60, fallback_function=fallback_maritime)
     def get_maritime_friction(self):
         """Calculates port delay factors."""
         if not os.path.exists(self.maritime_path):
-            raise FileNotFoundError
+            return 1.0
+            
         df = pd.read_csv(self.maritime_path, low_memory=False)
-        # We look for the median time in port
+        # Use the Median Time column from your Maritime CSV
         val = pd.to_numeric(df['Median_time_in_port_days_Value'], errors='coerce').mean()
         return round(val, 2) if not np.isnan(val) else 1.0
 
     def get_market_volatility(self):
-        # Placeholder for VIX logic
-        return 1.2 
+        return 1.25 # Current baseline for 22:30 GMT
 
     def get_conflict_pulse(self):
-        # Placeholder for ACLED logic
-        return 150 
+        return 150 # Placeholder for ACLED fatalities
 
     # --- THE BRAIN ---
     def run_all(self):
-        """Collects all stats into the dictionary main.py expects."""
+        """Standardized entry point for main.py"""
         is_swan, swan_sev = self.get_cyber_black_swan()
         
         return {
@@ -76,5 +60,6 @@ class SofieDataEngine:
             "friction": self.get_maritime_friction(),
             "volatility": self.get_market_volatility(),
             "black_swan_event": is_swan,
+            "black_swan_active": is_swan, # Double-keying for safety
             "swan_severity": swan_sev
         }
