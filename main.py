@@ -1,85 +1,84 @@
 import os
-import time
-import numpy as np
+import argparse
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from src.utils.data_processor import SofieDataEngine
 
-def apply_stochastic_shock(base_score, volatility_factor):
+def calculate_nexus_score(live_stats):
     """
-    LAYER 1: Cauchy 'Fat-Tail' Math.
-    Simulates unpredictable market jumps.
+    Calculates a stochastic stability score.
+    Higher values = Lower Stability (Risk).
     """
-    # standard_cauchy creates the 'Black Swan' outliers.
-    # We scale it by the swan_severity to control impact.
-    shock = np.random.standard_cauchy() * volatility_factor
-    final_score = base_score + shock
+    # 1. Base Score (The deterministic part)
+    # Scaled against fatalities, port friction, and market volatility
+    base = (live_stats['fatalities'] / 20) + (live_stats['friction'] * 10) + (live_stats['volatility'] * 15)
     
-    # Cap the index between 0 (Peace) and 150 (Total Collapse)
+    # 2. Stochastic Scaling (The 'Cauchy' Factor)
+    # If a Black Swan is active, gamma (spread) increases to reflect systemic shock
+    is_swan = live_stats.get('black_swan_active', False)
+    swan_sev = live_stats.get('swan_severity', 0.1)
+    
+    gamma = swan_sev if is_swan else 0.5
+    
+    # Generate a Cauchy Shock (Heavy-Tailed)
+    # Unlike a Normal distribution, Cauchy allows for 'extreme' outliers (Black Swans)
+    shock = abs(np.random.standard_cauchy()) * gamma
+    
+    final_score = base + shock
+    
+    # Clip between 0-150 for the index display
     return round(np.clip(final_score, 0, 150), 2)
 
-def main():
-    print("=" * 55)
-    print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    now = datetime.now()
-    print(f"DATE: {now.strftime('%B %d, %Y')} | TIME: {now.strftime('%H:%M')} GMT")
-    print("=" * 55)
+def update_history(scenario, score):
+    """Logs the new score to stability_history.csv"""
+    history_path = "stability_history.csv"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    new_data = pd.DataFrame([[timestamp, scenario, score]], columns=["Timestamp", "Scenario", "Score"])
+    
+    if os.path.exists(history_path):
+        new_data.to_csv(history_path, mode='a', header=False, index=False)
+    else:
+        new_data.to_csv(history_path, index=False)
 
-    # Initialize the Data Engine (with Circuit Breakers)
+def main():
+    parser = argparse.ArgumentParser(description="SOFIE EVOLVED v2.0 - Stability Monitor")
+    parser.add_argument("--scenario", type=str, default="baseline", help="Scenario to run")
+    args = parser.parse_args()
+
+    # Initialize Data Engine
     engine = SofieDataEngine()
     
-    # --- DATA ACQUISITION ---
-    # run_all() returns a dictionary of all tactical sensors
-    live_stats = engine.run_all()
+    print("=======================================================")
+    print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
+    print(f"DATE: {datetime.now().strftime('%B %d, %Y | TIME: %H:%M')} GMT")
+    print("=======================================================")
 
-    # --- BASELINE CALCULATION ---
-    # Components of the Stability Index
-    conflict_friction = live_stats.get('fatalities', 0) * 0.05
-    maritime_friction = (live_stats.get('friction', 1.0) - 1.0) * 10
-    market_volatility = live_stats.get('volatility', 20.0) / 4
-    
-    raw_base_score = 40.0 + conflict_friction + maritime_friction + market_volatility
+    try:
+        # 1. Fetch live metrics (Cyber, Maritime, Market)
+        live_stats = engine.run_all()
+        
+        # 2. Calculate the Stochastic Stability Index
+        stability_score = calculate_nexus_score(live_stats)
+        
+        # 3. Determine Status
+        status = "CRITICAL" if stability_score > 90 else "UNSTABLE" if stability_score > 70 else "STABLE"
+        
+        # 4. Log to CSV
+        update_history(args.scenario, stability_score)
 
-    # --- TIME-BASED LOGIC (March 22nd Escalation) ---
-    # If past 22:00 GMT, add the 'Monday Morning' Market Opening panic
-    if now.hour >= 22:
-        raw_base_score += 5.0
+        print("-------------------------------------------------------")
+        print(f"STABILITY INDEX: {stability_score}")
+        print(f"STATUS: {status}")
+        if live_stats['black_swan_active']:
+            print(f"!!! BLACK SWAN DETECTED: Severity {live_stats['swan_severity']} !!!")
+        print("=======================================================")
+        print(f"--- SITREP SUMMARY: {datetime.now().strftime('%B %d, %Y').upper()} ---")
+        print("ULTIMATUM EXPIRES IN <34 HOURS.")
 
-    # --- BLACK SWAN MULTIPLIER ---
-    black_swan_multiplier = 1.0
-    # Use .get() to avoid KeyErrors if the sensor is offline
-    if live_stats.get('black_swan_active', False):
-        severity = live_stats.get('swan_severity', 0)
-        # 1.6x multiplier for critical cyber/mobility events
-        black_swan_multiplier = 1.0 + (severity * 0.1)
-        print(f"!!! BLACK SWAN DETECTED: Digital/Physical Multiplier {black_swan_multiplier:.1f}x Applied !!!")
-
-    # --- FINAL STOCHASTIC ENGINE ---
-    # Apply the Cauchy Shock based on current system volatility
-    final_raw = raw_base_score * black_swan_multiplier
-    stability_index = apply_stochastic_shock(final_raw, live_stats.get('swan_severity', 1.0))
-
-    # --- SITREP OUTPUT ---
-    print("-" * 55)
-    print(f"STABILITY INDEX: {stability_index}")
-    print(f"STATUS: {'CRITICAL' if stability_index > 80 else 'UNSTABLE' if stability_index > 60 else 'STABLE'}")
-    
-    if stability_index > 80:
-        print("-> ALERT: Systemic risk exceeds 80th percentile. Deploying countermeasures.")
-    
-    # --- EXPORT TO HISTORY ---
-    history_file = "stability_history.csv"
-    new_entry = pd.DataFrame([{
-        "Timestamp": now.strftime("%Y-%m-%d %H:%M"),
-        "Scenario": "baseline",
-        "Score": stability_index
-    }])
-    
-    new_entry.to_csv(history_file, mode='a', header=not os.path.exists(history_file), index=False)
-    
-    print("=" * 55)
-    print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
-    print(f"ULTIMATUM EXPIRES IN <{36 if now.hour < 22 else 34} HOURS.")
+    except Exception as e:
+        print(f"CRITICAL SYSTEM ERROR: {e}")
 
 if __name__ == "__main__":
     main()
