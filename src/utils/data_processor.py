@@ -29,6 +29,33 @@ class SofieDataEngine:
             # Silencing error output for a cleaner console
             return 0
 
+    def get_market_volatility(self):
+        """Processes the VIX data to adjust the Stability Index sensitivity."""
+        # Path to your figure2_56.csv or extracted VIX data
+        vix_path = os.path.join(self.root, "volatility/figure2_56.csv")
+        try:
+            df = pd.read_csv(vix_path)
+            # Find the most recent 'Close' or 'Value'
+            val_col = self._find_column(df, ['value', 'close', 'vix'])
+            current_vix = float(df[val_col].iloc[-1])
+            # Normalize: VIX of 20 is baseline (1.0). VIX of 40 is 2.0x panic.
+            return round(current_vix / 20.0, 2)
+        except:
+            return 1.0
+
+    def get_migration_pressure(self):
+        """Analyzes asylum seekers to find 'Refugee Hotspots' for the map."""
+        migration_path = os.path.join(self.root, "Migration & Refugee Flows/asylum_seekers.csv")
+        try:
+            df = pd.read_csv(migration_path)
+            # Group by Country of Asylum and count recent applications
+            # We filter for 'recent' if the column exists, else take top 10
+            country_col = self._find_column(df, ['country', 'asylum'])
+            top_pressures = df.groupby(country_col).size().sort_values(ascending=False).head(10).index.tolist()
+            return top_pressures
+        except:
+            return []
+
     def get_maritime_friction(self):
         """Reads Port Performance data to calculate a friction multiplier."""
         port_file = os.path.join(self.root, "Black Swan/Maritime Port Performance Project Dataset.csv")
