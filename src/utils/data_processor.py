@@ -127,8 +127,14 @@ class SofieDataEngine:
             print(f"!! Friction Map Data Error: {e}")
             return {}
 
-    def run_all(self):
+   def run_all(self):
         return {
+            "fatalities": self.get_conflict_pulse(),
+            "friction": self.get_maritime_friction(),
+            "volatility": self.get_market_volatility(), # NEW
+            "energy_vulnerable": self.get_energy_vulnerability(), # NEW
+            "migration_hotspots": self.get_migration_pressure() # NEW
+        }
             "fatalities": self.get_conflict_pulse(),
             "friction": self.get_maritime_friction()
         }
