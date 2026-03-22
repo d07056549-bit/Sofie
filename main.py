@@ -1,18 +1,17 @@
 import os
-import sys
 import argparse
 from datetime import datetime
 
-# Import our custom modules
+# Import custom intelligence modules
 from src.utils.visualizer import SofieVisualizer
 from src.utils.mapper import SofieMapper
+from src.utils.logistics_mapper import LogisticsMapper
 from src.utils.data_processor import SofieDataEngine
 
 def record_history(score, scenario_name, output_path="exports/"):
-    """Logs the simulation result to a CSV for the trendline component."""
+    """Logs simulation results for the historical trend panel."""
     history_file = os.path.join(output_path, "stability_history.csv")
     file_exists = os.path.isfile(history_file)
-    
     with open(history_file, "a") as f:
         if not file_exists:
             f.write("Timestamp,Scenario,Score\n")
@@ -20,91 +19,71 @@ def record_history(score, scenario_name, output_path="exports/"):
         f.write(f"{timestamp},{scenario_name},{score}\n")
 
 def main():
-    # 1. Setup CLI Arguments
-    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 - Global Fragility Monitor")
+    # 1. Setup CLI
+    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | March 22, 2026 Nexus")
     parser.add_argument('--scenario', type=str, default='baseline', 
-                        choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'],
-                        help='Choose the simulation scenario')
+                        choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'])
     args = parser.parse_args()
 
-    print("="*50)
+    print("="*55)
     print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"DATE: March 22, 2026")
-    print("="*50 + "\n")
+    print(f"DATE: March 22, 2026 | TIME: 21:40 GMT")
+    print("="*55 + "\n")
 
-    # 2. Initialize Data Engines
-    # This reads your C:/Data/raw/ folder automatically
+    # 2. Data Ingestion (CSVs + News)
     data_engine = SofieDataEngine(root_dir="Data/raw")
-    live_csv_stats = data_engine.run_all() 
+    live_stats = data_engine.run_all()
     
-    # 3. Define Simulation Scenarios
-    # We combine manual inputs with data-driven multipliers from your CSVs
+    # 3. Crisis Intelligence Multiplier
+    # Logic: If 'blockade' is in the news, global fragility spikes by 40%
+    news_multiplier = 1.0
+    if os.path.exists("news_feed.txt"):
+        with open("news_feed.txt", "r") as f:
+            news = f.read().lower()
+            if any(word in news for word in ["blockade", "strike", "ultimatum"]):
+                news_multiplier = 1.4
+
+    # 4. Scenario Definitions
     scenarios = {
         'baseline': {
-            'oil_price': 112.19, 
-            'port_friction': live_csv_stats['friction'], # From Maritime CSV
-            'sovereign_risk_entities': 96 + (live_csv_stats['fatalities'] // 500) # Risk scaled by ACLED deaths
+            'oil_price': 112.19, # Current Brent Spot
+            'port_friction': live_stats['friction'] * news_multiplier,
+            'sovereign_risk_entities': 96 + (live_stats['fatalities'] // 200)
         },
-        'peace': {
-            'oil_price': 72.50,
-            'port_friction': 1.0,
-            'sovereign_risk_entities': 45
-        },
-        'blackout': {
-            'oil_price': 185.00,
-            'port_friction': 5.0,
-            'sovereign_risk_entities': 142
-        },
-        'ultimatum_expires': {
-            'oil_price': 145.20,
-            'port_friction': 3.5,
-            'sovereign_risk_entities': 110
-        }
+        'peace': {'oil_price': 72.50, 'port_friction': 1.0, 'sovereign_risk_entities': 45},
+        'blackout': {'oil_price': 185.00, 'port_friction': 5.0, 'sovereign_risk_entities': 142},
+        'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'sovereign_risk_entities': 110}
     }
 
-    # 4. Calculate Global Stability Index (The SOFIE Formula)
-    current = scenarios[args.scenario]
-    
-    # Simple weighted fragility score (0-100)
-    # Oil contributes 40%, Friction 30%, Debt Risk 30%
-    oil_component = (min(current['oil_price'], 200) / 200) * 40
-    fric_component = (min(current['port_friction'], 5) / 5) * 30
-    risk_component = (min(current['sovereign_risk_entities'], 195) / 195) * 30
-    
-    stability_score = round(oil_component + fric_component + risk_component, 2)
+    # 5. Stability Index Calculation
+    curr = scenarios[args.scenario]
+    oil_comp = (min(curr['oil_price'], 200) / 200) * 45
+    fric_comp = (min(curr['port_friction'], 5) / 5) * 30
+    risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
+    stability_score = round(oil_comp + fric_comp + risk_comp, 2)
 
     print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-    # 5. Generate Geographic Intelligence Map
-    # Pulls country names directly from your ACLED/UCDP fatalitiy data
+    # 6. Map Generation (Risk & Logistics)
     at_risk_list = data_engine.get_at_risk_countries()
-    mapper = SofieMapper(output_path="exports/")
-    mapper.generate_risk_map(at_risk_list)
+    SofieMapper().generate_risk_map(at_risk_list)
+    
+    friction_data = data_engine.get_port_friction_map()
+    LogisticsMapper().generate_heatmap(friction_data)
 
-    # 5.5 Generate Logistics Heatmap
-    from src.utils.logistics_mapper import LogisticsMapper
-    friction_map_data = data_engine.get_port_friction_map()
-    LogisticsMapper().generate_heatmap(friction_map_data)
-
-    # 6. Generate Multi-Panel Dashboard
-    viz = SofieVisualizer(output_path="exports/")
-    viz.generate_risk_chart(stability_score, current)
-
-    # 7. Record to History for Trend Analysis
+    # 7. Dashboard & Logging
+    SofieVisualizer().generate_risk_chart(stability_score, curr)
     record_history(stability_score, args.scenario)
 
-    # 8. Intelligence Sign-off
-    print("="*50)
+    # 8. SitRep Summary
+    print("="*55)
     print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
-    if stability_score > 80:
-        print("STATUS: SYSTEMIC COLLAPSE IMMINENT.")
-        print("ACTION: Trigger 'Zeta' protocols. Advise immediate asset liquidation.")
-    elif stability_score > 65:
-        print("STATUS: CRITICAL TENSION.")
-        print(f"ACTION: Monitor Hormuz Blockade. Watch for yields in {at_risk_list[:3]}.")
+    if stability_score > 75:
+        print("STATUS: CRITICAL WATCH. Ultimatum expires in <36 hours.")
+        print(f"ALERT: Contagion detected in {at_risk_list[:3]}.")
     else:
-        print("STATUS: NOMINAL.")
-    print("="*50)
+        print("STATUS: STABLE. No immediate kinetic escalation detected.")
+    print("="*55)
     print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
 
 if __name__ == "__main__":
