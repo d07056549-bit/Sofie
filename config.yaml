@@ -1,0 +1,9 @@
+# Sofie Global Configuration
+paths:
+  raw_data: "./data/raw"
+  processed_data: "./data/processed"
+  
+thresholds:
+  oil_shock: 100.0
+  gpr_alert: 300.0
+  default_risk_rating: "B-"
