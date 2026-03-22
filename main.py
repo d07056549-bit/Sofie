@@ -1,3 +1,5 @@
+import pandas as pd # Ensure you have pandas
+from datetime import datetime
 import argparse
 from src.data_pipeline.loaders import DataLoader
 from src.core.risk_engine import SofieRiskEngine
@@ -12,6 +14,19 @@ def main():
     args = parser.parse_args()
 
     print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
+
+    def record_history(score, scenario):
+    history_file = "exports/stability_history.csv"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    new_data = pd.DataFrame([[timestamp, scenario, score]], 
+                            columns=['Timestamp', 'Scenario', 'Score'])
+    
+    if not os.path.exists(history_file):
+        new_data.to_csv(history_file, index=False)
+    else:
+        new_data.to_csv(history_file, mode='a', header=False, index=False)
+    print(f"-> History Updated: {timestamp} | Score: {score}")
     
     # 1. Load Baseline
     data = DataLoader(feed_date="2026-03-22").get_latest_nexus()
@@ -25,10 +40,12 @@ def main():
     stability_score = engine.calculate_global_fragility()
     print(f"Global Stability Index: {stability_score}")
 
- # 4. Export (UPDATED)
-    # Pass 'data' into the visualizer so it can draw the subplots
+# 4. Export & Record
     viz = SofieVisualizer()
-    viz.generate_risk_chart(stability_score, data) 
+    viz.generate_risk_chart(stability_score, data)
+    
+    # Record this specific run to history
+    record_history(stability_score, args.scenario if args.scenario else "Baseline")
     
     # Generate the text report
     brief = SofieBriefing()
