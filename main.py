@@ -81,6 +81,11 @@ def main():
     mapper = SofieMapper(output_path="exports/")
     mapper.generate_risk_map(at_risk_list)
 
+    # 5.5 Generate Logistics Heatmap
+    from src.utils.logistics_mapper import LogisticsMapper
+    friction_map_data = data_engine.get_port_friction_map()
+    LogisticsMapper().generate_heatmap(friction_map_data)
+
     # 6. Generate Multi-Panel Dashboard
     viz = SofieVisualizer(output_path="exports/")
     viz.generate_risk_chart(stability_score, current)
