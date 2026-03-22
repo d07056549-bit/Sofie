@@ -23,16 +23,29 @@ class SofieDataEngine:
 
     # --- PROTECTED SENSORS ---
 
-    @circuit(failure_threshold=3, recovery_timeout=60, fallback_function=fallback_cyber)
+   @circuit(failure_threshold=1, recovery_timeout=60, fallback_function=fallback_cyber)
     def get_cyber_black_swan(self):
-        """Scans cyber data for high-severity triggers."""
+        """
+        Scans cyber data for high-severity triggers.
+        Targeting severity >= 9 as 'Black Swan' events.
+        """
         if not os.path.exists(self.cyber_path):
-            raise FileNotFoundError
+            # Triggers circuit breaker fallback if file is missing
+            return self.fallback_cyber()
+        
+        # Load the CSV with error handling for large files
         df = pd.read_csv(self.cyber_path, low_memory=False)
+        
+        # Filter for critical severity (9 and 10)
+        # These represent systemic shocks in the SOFIE logic
         critical_hits = df[df['attack_severity'] >= 9]
+        
         if not critical_hits.empty:
-            # Severity count acts as the multiplier base
-            return True, float(len(critical_hits))
+            # We calculate a 'Cyber Stress Multiplier' 
+            # based on the average severity of these critical hits
+            avg_severity = critical_hits['attack_severity'].mean()
+            return True, float(avg_severity)
+            
         return False, 0.0
 
     @circuit(failure_threshold=3, recovery_timeout=60, fallback_function=fallback_maritime)
