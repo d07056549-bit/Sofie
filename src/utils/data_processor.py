@@ -44,7 +44,6 @@ class SofieDataEngine:
             df = pd.read_csv(vix_path)
             val_col = self._find_column(df, ['value', 'close', 'vix'])
             current_vix = float(df[val_col].iloc[-1])
-            # Normalize: VIX 20 = 1.0. Higher is more panic.
             return round(current_vix / 20.0, 2)
         except:
             return 1.0
