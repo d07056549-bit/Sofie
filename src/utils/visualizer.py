@@ -58,3 +58,48 @@ class SofieVisualizer:
                 explode=(0.05, 0)) 
         
         ax4.set_title(f"Sovereign Debt Risk ({risk_count} Entities)", fontsize=14, fontweight='bold')
+
+        # --- PANEL 5: STABILITY TRENDLINE (Bottom Span) ---
+        ax5 = fig.add_subplot(gs[2, :])
+        history_file = os.path.join(self.output_path, "stability_history.csv")
+        
+        if os.path.exists(history_file):
+            try:
+                df = pd.read_csv(history_file)
+                df = df.tail(15) # Show last 15 simulations
+                ax5.plot(df['Timestamp'], df['Score'], marker='o', color='#6c5ce7', linewidth=3, markersize=8)
+                ax5.fill_between(df['Timestamp'], df['Score'], color='#a29bfe', alpha=0.2)
+                ax5.set_ylim(0, 110)
+                ax5.set_title("Historical Stability Trend", fontsize=14, fontweight='bold')
+                ax5.tick_params(axis='x', rotation=30)
+                ax5.grid(True, linestyle=':', alpha=0.5)
+            except Exception as e:
+                ax5.text(0.5, 0.5, f"Error Loading Trend: {e}", ha='center')
+        else:
+            ax5.text(0.5, 0.5, "Waiting for initial simulation data...", ha='center')
+
+        # --- PANEL 6: INTELLIGENCE FEED (Footer) ---
+        ax6 = fig.add_subplot(gs[3, :])
+        ax6.axis('off')
+        
+        news_file = "news_feed.txt"
+        if os.path.exists(news_file):
+            with open(news_file, "r") as f:
+                headlines = f.readlines()[-5:] # Display the 5 most recent events
+            feed_text = "".join(headlines)
+        else:
+            feed_text = "[WAITING] System is scanning for live intelligence updates..."
+            
+        ax6.text(0.01, 0.8, f"LIVE INTELLIGENCE FEED (MARCH 22, 2026):", 
+                 fontsize=12, fontweight='bold', transform=ax6.transAxes)
+        ax6.text(0.01, 0.1, feed_text, 
+                 transform=ax6.transAxes, fontsize=10.5, family='monospace',
+                 linespacing=1.8, verticalalignment='bottom', 
+                 bbox=dict(boxstyle='round,pad=1', facecolor='#fdfdfd', edgecolor='#dfe6e9', alpha=0.8))
+
+        # Final Formatting and Export
+        plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+        output_file = os.path.join(self.output_path, "stability_report_march_22.png")
+        plt.savefig(output_file, dpi=120)
+        plt.close()
+        print(f"-> Multi-Panel Intelligence Dashboard Exported: {output_file}")
