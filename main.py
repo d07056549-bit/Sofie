@@ -74,6 +74,19 @@ def main():
     record_history(stability_score, current_scenario)
 
     print("\n" + "="*50)
+    print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
+    if stability_score > 90:
+        print("STATUS: SYSTEMIC COLLAPSE IMMINENT.")
+        print("ACTION: Trigger 'Zeta' protocols. Advise immediate asset liquidation in Red Zones.")
+    elif stability_score > 70:
+        print("STATUS: CRITICAL TENSION.")
+        print(f"ACTION: Monitor 48h Ultimatum. Watch for {at_risk_list[0]} bond yield spikes.")
+    else:
+        print("STATUS: NOMINAL.")
+        print("ACTION: Standard monitoring. No immediate kinetic threats detected.")
+    print("="*50)
+
+    print("\n" + "="*50)
     print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---")
     print("="*50)
 
