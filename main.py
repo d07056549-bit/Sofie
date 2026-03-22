@@ -1,78 +1,90 @@
 import os
 import argparse
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime
 
-# Layer 1: Sensing (The Data Engine)
+# Import custom intelligence modules
+from src.utils.visualizer import SofieVisualizer
+from src.utils.mapper import SofieMapper
+from src.utils.logistics_mapper import LogisticsMapper
 from src.utils.data_processor import SofieDataEngine
 
-EXPORT_DIR = os.path.join(os.getcwd(), "exports")
-os.makedirs(EXPORT_DIR, exist_ok=True)
-
-def generate_visual_intel(score, live_stats):
-    """
-    RESTORES THE MAPS:
-    Combines the Stability Index with a Tension Heatmap.
-    """
-    plt.style.use('dark_background')
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'width_ratios': [1, 2]})
-    
-    # --- PANEL 1: STABILITY GAUGE ---
-    color = 'red' if score > 75 else 'orange' if score > 45 else 'green'
-    ax1.bar(['Index'], [score], color=color, alpha=0.7)
-    ax1.set_ylim(0, 100)
-    ax1.set_title("SYSTEMIC STABILITY", color='cyan')
-    
-    # --- PANEL 2: TENSION MAP (Restored) ---
-    # Simulating the geospatial tension from the Maritime dataset
-    # In a full build, this would use actual Lat/Long from your CSV
-    num_ports = 12
-    x = np.random.uniform(-180, 180, num_ports)
-    y = np.random.uniform(-60, 80, num_ports)
-    tensions = np.random.uniform(10, score, num_ports) # Tension scales with score
-    
-    scatter = ax2.scatter(x, y, s=tensions*5, c=tensions, cmap='Reds', alpha=0.6, edgecolors='white')
-    ax2.set_title(f"GLOBAL MARITIME TENSION MAP | {datetime.now().strftime('%H:%M')} GMT", color='lime')
-    ax2.set_facecolor('#000d1a') # Deep sea blue
-    ax2.grid(True, alpha=0.1)
-    
-    plt.colorbar(scatter, ax=ax2, label='Tension Intensity')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(EXPORT_DIR, "stability_report_with_maps.png"))
-    plt.close()
+def record_history(score, scenario_name, output_path="exports/"):
+    """Logs simulation results for the historical trend panel."""
+    history_file = os.path.join(output_path, "stability_history.csv")
+    file_exists = os.path.isfile(history_file)
+    with open(history_file, "a") as f:
+        if not file_exists:
+            f.write("Timestamp,Scenario,Score\n")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        f.write(f"{timestamp},{scenario_name},{score}\n")
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", type=str, default="baseline")
+    # 1. Setup CLI
+    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | March 22, 2026 Nexus")
+    parser.add_argument('--scenario', type=str, default='baseline', 
+                        choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'])
     args = parser.parse_args()
 
-    engine = SofieDataEngine()
+    print("="*55)
+    print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
+    print(f"DATE: March 22, 2026 | TIME: 21:40 GMT")
+    print("="*55 + "\n")
+
+    # 2. Data Ingestion (CSVs + News)
+    data_engine = SofieDataEngine(root_dir="Data/raw")
+    live_stats = data_engine.run_all()
     
-    print("=======================================================")
-    print("--- SOFIE VISUAL INTEL | MAPS RESTORED ---")
-    print("=======================================================")
+    # 3. Crisis Intelligence Multiplier
+    # Logic: If 'blockade' is in the news, global fragility spikes by 40%
+    news_multiplier = 1.0
+    if os.path.exists("news_feed.txt"):
+        with open("news_feed.txt", "r") as f:
+            news = f.read().lower()
+            if any(word in news for word in ["blockade", "strike", "ultimatum"]):
+                news_multiplier = 1.4
 
-    try:
-        live_stats = engine.run_all()
-        
-        # Calculate a stable score (Back to the 0-100 range)
-        fatalities = live_stats.get('fatalities', 0) / 20
-        friction = live_stats.get('friction', 1.0) * 10
-        volatility = live_stats.get('volatility', 1.0) * 15
-        score = round(np.clip(fatalities + friction + volatility, 0, 100), 2)
-        
-        # Generate the dashboard with the Map
-        generate_visual_intel(score, live_stats)
+    # 4. Scenario Definitions
+    scenarios = {
+        'baseline': {
+            'oil_price': 112.19, # Current Brent Spot
+            'port_friction': live_stats['friction'] * news_multiplier,
+            'sovereign_risk_entities': 96 + (live_stats['fatalities'] // 200)
+        },
+        'peace': {'oil_price': 72.50, 'port_friction': 1.0, 'sovereign_risk_entities': 45},
+        'blackout': {'oil_price': 185.00, 'port_friction': 5.0, 'sovereign_risk_entities': 142},
+        'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'sovereign_risk_entities': 110}
+    }
 
-        print(f"STABILITY INDEX: {score}")
-        print(f"✅ MAP GENERATED: exports/stability_report_with_maps.png")
-        print("=======================================================")
+    # 5. Stability Index Calculation
+    curr = scenarios[args.scenario]
+    oil_comp = (min(curr['oil_price'], 200) / 200) * 45
+    fric_comp = (min(curr['port_friction'], 5) / 5) * 30
+    risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
+    stability_score = round(oil_comp + fric_comp + risk_comp, 2)
 
-    except Exception as e:
-        print(f"SYSTEM ERROR: {e}")
+    print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
+
+    # 6. Map Generation (Risk & Logistics)
+    at_risk_list = data_engine.get_at_risk_countries()
+    SofieMapper().generate_risk_map(at_risk_list)
+    
+    friction_data = data_engine.get_port_friction_map()
+    LogisticsMapper().generate_heatmap(friction_data)
+
+    # 7. Dashboard & Logging
+    SofieVisualizer().generate_risk_chart(stability_score, curr)
+    record_history(stability_score, args.scenario)
+
+    # 8. SitRep Summary
+    print("="*55)
+    print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
+    if stability_score > 75:
+        print("STATUS: CRITICAL WATCH. Ultimatum expires in <36 hours.")
+        print(f"ALERT: Contagion detected in {at_risk_list[:3]}.")
+    else:
+        print("STATUS: STABLE. No immediate kinetic escalation detected.")
+    print("="*55)
+    print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
 
 if __name__ == "__main__":
     main()
