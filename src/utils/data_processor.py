@@ -111,11 +111,13 @@ class SofieDataEngine:
         except:
             return False, 0
 
-    def run_all(self):
-        """Combines all sensors into a single dictionary."""
+   def run_all(self):
+        is_black_swan, swan_severity = self.get_cyber_black_swan()
         return {
             "fatalities": self.get_conflict_pulse(),
             "friction": self.get_maritime_friction(),
             "volatility": self.get_market_volatility(),
-            "migration_hotspots": self.get_migration_pressure()
+            "migration_hotspots": self.get_migration_pressure(),
+            "black_swan_event": is_black_swan, # NEW
+            "swan_severity": swan_severity      # NEW
         }
