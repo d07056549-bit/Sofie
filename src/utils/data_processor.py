@@ -89,6 +89,28 @@ class SofieDataEngine:
         except:
             return {}
 
+    def get_cyber_black_swan(self):
+        """Scans cybersecurity data for 'Black Swan' event triggers."""
+        cyber_path = os.path.join(self.root, "Black Swan/cybersecurity synthesized data.csv")
+        try:
+            # We look for keywords that indicate a systemic failure
+            df = pd.read_csv(cyber_path, low_memory=False)
+            
+            # Find a column that looks like 'Severity', 'Impact', or 'Status'
+            impact_col = self._find_column(df, ['severity', 'impact', 'status', 'level'])
+            
+            if impact_col:
+                # Count 'Critical' or 'Emergency' events in the last 10 entries
+                recent_threats = df.tail(10)[impact_col].astype(str).str.lower()
+                critical_count = recent_threats.str.contains('critical|fatal|emergency|blackout').sum()
+                
+                # If more than 2 critical events hit at once, it's a Black Swan
+                if critical_count >= 2:
+                    return True, critical_count
+            return False, 0
+        except:
+            return False, 0
+
     def run_all(self):
         """Combines all sensors into a single dictionary."""
         return {
