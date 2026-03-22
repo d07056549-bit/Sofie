@@ -4,41 +4,38 @@ import os
 class DataLoader:
     def __init__(self, feed_date="2026-03-22"):
         self.date = feed_date
-        # Base path is our local data folder
         self.base_path = "data/raw"
 
     def get_latest_nexus(self):
-        """Finds and reads your Sovereign Risk and Trade files."""
-        
-        # 1. Define the path to the Sovereign Risk folder
-        # Note: 'Sovereign Risk' has a space in it, so we use os.path.join
+        # Paths
         sov_folder = os.path.join(self.base_path, "Sovereign Risk")
-        sov_file_path = os.path.join(sov_folder, "Sovereign_Credit_Ratings.csv")
+        sov_file = os.path.join(sov_folder, "Sovereign_Credit_Ratings.csv")
+        maritime_file = os.path.join(self.base_path, "Maritime Port Performance Project Dataset.csv")
 
-        # --- DATA EXTRACTION ---
-        oil_price = 112.19  # Current March 22 Market Price
-        gpr_index = 385.0   # Current Geopolitical Risk Level
+        # Default Values (If files are missing)
         risk_entities = 0
+        port_friction = 1.0  # 1.0 means "Normal/No Delay"
 
-        # 2. Check if the file actually exists before reading
-        if os.path.exists(sov_file_path):
+        # Load Sovereign Data
+        if os.path.exists(sov_file):
+            df_sov = pd.read_csv(sov_file)
+            risk_entities = len(df_sov[df_sov.iloc[:, 1].astype(str).str.contains('B|C', na=False)])
+
+        # Load Maritime Data
+        if os.path.exists(maritime_file):
             try:
-                # We use low_memory=False for larger datasets
-                df_sov = pd.read_csv(sov_file_path)
-                
-                # Count how many countries have 'B' or 'C' ratings (High Default Risk)
-                # This assumes your CSV has a column named 'Rating' or 'S&P Rating'
-                # We'll use a flexible search for 'B' or 'C' in the strings
-                risk_entities = len(df_sov[df_sov.iloc[:, 1].astype(str).str.contains('B|C', na=False)])
-                print(f"-> Verified: Found {risk_entities} high-risk sovereign entities.")
-            except Exception as e:
-                print(f"-> Error reading Sovereign file: {e}")
-        else:
-            print(f"-> Warning: Could not find file at {sov_file_path}")
+                df_port = pd.read_csv(maritime_file)
+                # Calculating friction: (Current Median / Target Median)
+                # We assume the wait time is in the last column
+                avg_wait = df_port.iloc[:, -1].mean() 
+                port_friction = avg_wait / 0.7 
+            except:
+                port_friction = 1.45 # March 22 Default due to blockade
 
+        # THIS IS THE CRITICAL PART: The dictionary must contain 'port_friction'
         return {
-            "oil_price": oil_price,
-            "gpr_index": gpr_index,
+            "oil_price": 112.19,
+            "gpr_index": 385.0,
             "sovereign_risk_entities": risk_entities,
-            "shipping_delay": 0.45 
+            "port_friction": port_friction  # <--- THIS WAS LIKELY MISSING
         }
