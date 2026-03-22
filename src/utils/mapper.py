@@ -1,6 +1,8 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
+import requests
+import json
 
 class SofieMapper:
     def __init__(self, output_path="exports/"):
@@ -9,43 +11,50 @@ class SofieMapper:
             os.makedirs(self.output_path)
 
     def generate_risk_map(self, at_risk_countries):
-        # Using a direct URL to bypass local dataset issues
-        world_url = "https://raw.githubusercontent.com/holtzy/The-Python-Graph-Gallery/master/static/data/world.geojson"
+        # Reliable Raw GeoJSON URL
+        world_url = "https://raw.githubusercontent.com/python-visualization/folium/master/examples/data/world-countries.json"
         
         try:
-            world = gpd.read_file(world_url)
+            # 1. Manually fetch the data to ensure no "Unexpected Character" HTML errors
+            response = requests.get(world_url, timeout=10)
+            if response.status_code != 200:
+                raise Exception(f"GitHub returned status {response.status_code}")
             
-            # Note: GeoJSON usually names the column 'name' or 'NAME'
-            # We normalize to handle both
+            # 2. Load the GeoJSON content
+            data = response.json()
+            world = gpd.GeoDataFrame.from_features(data, crs="EPSG:4326")
+            
+            # 3. Match country names (The 'name' column is standard in this dataset)
             world['risk_level'] = world['name'].apply(lambda x: 1 if x in at_risk_countries else 0)
 
-            fig, ax = plt.subplots(1, 1, figsize=(15, 8), facecolor='#f0f0f0')
+            fig, ax = plt.subplots(1, 1, figsize=(15, 8), facecolor='#1e1e1e')
             
-            # Base Layer (Grey for stable countries)
-            world.plot(ax=ax, color='#dfe6e9', edgecolor='white', linewidth=0.5)
+            # Base Layer (Dark mode for the War Room)
+            world.plot(ax=ax, color='#2d3436', edgecolor='#636e72', linewidth=0.5)
             
-            # Risk Layer (Red for flagged countries)
-            world[world.risk_level == 1].plot(ax=ax, color='#d63031', edgecolor='black', linewidth=0.8)
+            # Risk Layer (Neon Red for high alert)
+            world[world.risk_level == 1].plot(ax=ax, color='#ff7675', edgecolor='white', linewidth=1)
             
             plt.title("SOFIE GLOBAL RISK MAP | NEXUS EVENT: MARCH 22, 2026", 
-                      fontsize=18, fontweight='bold', color='#2d3436', pad=20)
+                      fontsize=18, fontweight='bold', color='white', pad=20)
             
-            # Legend/Status indicator
-            ax.annotate('STATION STATUS: CRITICAL WATCH', xy=(0.02, 0.05), 
-                        xycoords='axes fraction', fontsize=12, color='#d63031', 
-                        weight='bold', bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.8))
-            
-            # Tactical coordinates for the current conflict (Middle East)
-            # Strait of Hormuz is approx 26N, 56E
-            ax.plot(56, 26, marker='x', color='blue', markersize=10, mew=2, label='Conflict Zone')
+            # Conflict Indicator (Strait of Hormuz)
+            ax.plot(56, 26, marker='x', color='#0984e3', markersize=12, mew=3, label='Hormuz Blockade')
+            # Conflict Indicator (Diego Garcia)
+            ax.plot(72, -7, marker='x', color='#0984e3', markersize=12, mew=3, label='Diego Garcia Strike')
+
+            # Status Box
+            ax.annotate('DEFCON: 2 - REGIONAL ESCALATION', xy=(0.02, 0.05), 
+                        xycoords='axes fraction', fontsize=12, color='#ff7675', 
+                        weight='bold', bbox=dict(boxstyle='round,pad=0.5', facecolor='black', alpha=0.8))
 
             ax.axis('off')
             
             map_file = os.path.join(self.output_path, "risk_map_march_22.png")
-            plt.savefig(map_file, dpi=200, bbox_inches='tight', facecolor='#f0f0f0')
+            plt.savefig(map_file, dpi=200, bbox_inches='tight', facecolor='#1e1e1e')
             plt.close()
             print(f"-> Geographic Heatmap Exported: {map_file}")
             
         except Exception as e:
-            print(f"!! MAP ERROR: {e}")
-            print("-> Attempting fallback: Check your internet connection for GeoJSON fetch.")
+            print(f"!! MAP ENGINE FAILURE: {e}")
+            print("-> Proceeding with standard exports only.")
