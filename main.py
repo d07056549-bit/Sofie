@@ -54,23 +54,27 @@ def main():
         'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'sovereign_risk_entities': 110}
     }
 
-    # 5. Stability Index Calculation
+  # 5. Stability Index Calculation
     curr = scenarios[args.scenario]
     
-    # Define variables clearly before the final calculation
     oil_comp = (min(curr['oil_price'], 200) / 200) * 45
     fric_comp = (min(curr['port_friction'], 5) / 5) * 30
     risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
     
-    # 5.5 Market Opening Escalation (Sunday Night Logic)
+    # --- BLACK SWAN LOGIC ---
+    black_swan_multiplier = 1.0
+    if live_stats['black_swan_event']:
+        # Each critical cyber event adds a 20% multiplier to the global fragility
+        black_swan_multiplier = 1.0 + (live_stats['swan_severity'] * 0.2)
+        print(f"!!! BLACK SWAN DETECTED: Digital Infrastructure compromised. Multiplier: {black_swan_multiplier}x")
+    
+    # 5.5 Market Opening Escalation
     market_panic = 0
     if datetime.now().hour >= 22:
-        print("!! WARNING: Asian Market Opening approaching. Adding +5.0 volatility.")
         market_panic = 5.0
         
-    stability_score = round(oil_comp + fric_comp + risk_comp + market_panic, 2)
-
-    print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
+    # Apply the Black Swan multiplier to the final score
+    stability_score = round((oil_comp + fric_comp + risk_comp + market_panic) * black_swan_multiplier, 2)
 
     # 6. Map Generation
     at_risk_list = data_engine.get_at_risk_countries()
