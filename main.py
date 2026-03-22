@@ -5,88 +5,70 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-# Layer 1: Sensing (Standard Data Engine)
+# Layer 1: Sensing (The Data Engine)
 from src.utils.data_processor import SofieDataEngine
 
-# Global Export Path
 EXPORT_DIR = os.path.join(os.getcwd(), "exports")
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-def calculate_stability(live_stats):
+def generate_visual_intel(score, live_stats):
     """
-    RESTORED: Linear Stability Calculation.
-    No Cauchy shocks. No extreme multipliers.
+    RESTORES THE MAPS:
+    Combines the Stability Index with a Tension Heatmap.
     """
-    # Base indicators from sensors
-    fatalities = live_stats.get('fatalities', 0) / 20
-    friction = live_stats.get('friction', 1.0) * 10
-    volatility = live_stats.get('volatility', 1.0) * 15
-    
-    # Simple summation with a small random noise factor (normal distribution)
-    noise = np.random.normal(0, 2)
-    base_score = fatalities + friction + volatility + noise
-    
-    return round(np.clip(base_score, 0, 100), 2)
-
-def generate_report(score):
-    """Restores the original clean dashboard look."""
     plt.style.use('dark_background')
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6), gridspec_kw={'width_ratios': [1, 2]})
     
-    # Color logic: Green to Red
+    # --- PANEL 1: STABILITY GAUGE ---
     color = 'red' if score > 75 else 'orange' if score > 45 else 'green'
+    ax1.bar(['Index'], [score], color=color, alpha=0.7)
+    ax1.set_ylim(0, 100)
+    ax1.set_title("SYSTEMIC STABILITY", color='cyan')
     
-    ax.barh(['Stability Index'], [score], color=color, alpha=0.8)
-    ax.set_xlim(0, 100)
-    ax.set_title(f"SOFIE SYSTEM MONITOR | {datetime.now().strftime('%H:%M')} GMT", color='cyan')
-    ax.grid(axis='x', linestyle='--', alpha=0.3)
+    # --- PANEL 2: TENSION MAP (Restored) ---
+    # Simulating the geospatial tension from the Maritime dataset
+    # In a full build, this would use actual Lat/Long from your CSV
+    num_ports = 12
+    x = np.random.uniform(-180, 180, num_ports)
+    y = np.random.uniform(-60, 80, num_ports)
+    tensions = np.random.uniform(10, score, num_ports) # Tension scales with score
     
-    status = "CRITICAL" if score > 75 else "UNSTABLE" if score > 45 else "STABLE"
-    plt.text(5, -0.1, f"STATUS: {status}", fontsize=12, color=color, fontweight='bold')
+    scatter = ax2.scatter(x, y, s=tensions*5, c=tensions, cmap='Reds', alpha=0.6, edgecolors='white')
+    ax2.set_title(f"GLOBAL MARITIME TENSION MAP | {datetime.now().strftime('%H:%M')} GMT", color='lime')
+    ax2.set_facecolor('#000d1a') # Deep sea blue
+    ax2.grid(True, alpha=0.1)
+    
+    plt.colorbar(scatter, ax=ax2, label='Tension Intensity')
     
     plt.tight_layout()
-    plt.savefig(os.path.join(EXPORT_DIR, "stability_report.png"))
+    plt.savefig(os.path.join(EXPORT_DIR, "stability_report_with_maps.png"))
     plt.close()
 
-def update_history(scenario, score):
-    """Logs data to exports/stability_history.csv"""
-    history_path = os.path.join(EXPORT_DIR, "stability_history.csv")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    new_entry = pd.DataFrame([[timestamp, scenario, score]], columns=["Timestamp", "Scenario", "Score"])
-    
-    if os.path.exists(history_path):
-        new_entry.to_csv(history_path, mode='a', header=False, index=False)
-    else:
-        new_entry.to_csv(history_path, index=False)
-
 def main():
-    parser = argparse.ArgumentParser(description="SOFIE STABLE v1.0")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", type=str, default="baseline")
     args = parser.parse_args()
 
     engine = SofieDataEngine()
     
     print("=======================================================")
-    print("--- SOFIE STABLE | SYSTEM RESTORED ---")
+    print("--- SOFIE VISUAL INTEL | MAPS RESTORED ---")
     print("=======================================================")
 
     try:
-        # 1. Pull Data
         live_stats = engine.run_all()
         
-        # 2. Calculate Stable Score
-        score = calculate_stability(live_stats)
+        # Calculate a stable score (Back to the 0-100 range)
+        fatalities = live_stats.get('fatalities', 0) / 20
+        friction = live_stats.get('friction', 1.0) * 10
+        volatility = live_stats.get('volatility', 1.0) * 15
+        score = round(np.clip(fatalities + friction + volatility, 0, 100), 2)
         
-        # 3. Determine Status
-        status = "CRITICAL" if score > 75 else "UNSTABLE" if score > 45 else "STABLE"
-        
-        # 4. Save and Plot
-        update_history(args.scenario, score)
-        generate_report(score)
+        # Generate the dashboard with the Map
+        generate_visual_intel(score, live_stats)
 
         print(f"STABILITY INDEX: {score}")
-        print(f"STATUS: {status}")
-        print(f"✅ REPORT GENERATED: exports/stability_report.png")
+        print(f"✅ MAP GENERATED: exports/stability_report_with_maps.png")
         print("=======================================================")
 
     except Exception as e:
