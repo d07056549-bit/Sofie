@@ -56,6 +56,18 @@ class SofieDataEngine:
         except:
             return []
 
+    def get_energy_vulnerability(self):
+        """Uses OWID CO2 data to see which nations are most oil-dependent."""
+        co2_path = os.path.join(self.root, "OWID/annual-co2-emissions-per-country/annual-co2-emissions-per-country.csv")
+        try:
+            df = pd.read_csv(co2_path)
+            # Find countries with highest recent emissions - these feel the $112 oil spike most
+            latest_year = df[df['Year'] == df['Year'].max()]
+            high_emissions = latest_year.nlargest(15, 'Annual CO2 emissions')['Entity'].tolist()
+            return high_emissions
+        except:
+            return []
+
     def get_maritime_friction(self):
         """Reads Port Performance data to calculate a friction multiplier."""
         port_file = os.path.join(self.root, "Black Swan/Maritime Port Performance Project Dataset.csv")
