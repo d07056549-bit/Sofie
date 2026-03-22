@@ -1,30 +1,34 @@
+import argparse
 from src.data_pipeline.loaders import DataLoader
 from src.core.risk_engine import SofieRiskEngine
+from src.core.scenario_engine import ScenarioEngine # <-- NEW
 from src.utils.visualizer import SofieVisualizer
-from src.utils.briefing import SofieBriefing 
+from src.utils.briefing import SofieBriefing
 from src.utils.alerts import SofieAlerts
 
 def main():
+    parser = argparse.ArgumentParser(description="Sofie Evolved v2.0")
+    parser.add_argument("--scenario", type=str, help="Scenario: peace, ultimatum_expires, blackout")
+    args = parser.parse_args()
+
     print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
     
-    # 1. Load Data
+    # 1. Load Baseline
     data = DataLoader(feed_date="2026-03-22").get_latest_nexus()
     
-    # 2. Run Engine
+    # 2. Apply Scenario if requested
+    if args.scenario:
+        data = ScenarioEngine().apply(data, args.scenario)
+    
+    # 3. Calculate
     engine = SofieRiskEngine(data)
     stability_score = engine.calculate_global_fragility()
-    print(f"Current Global Stability Index: {stability_score}")
+    print(f"Global Stability Index: {stability_score}")
 
-    # 3. Visuals & Reports
-    viz = SofieVisualizer()
-    viz.generate_risk_chart(stability_score)
-    
-    brief = SofieBriefing()
-    brief.generate_brief(stability_score, data)
-    
-    # 4. Critical Alerts
-    alerts = SofieAlerts()
-    alerts.get_top_threats()
+    # 4. Export
+    SofieVisualizer().generate_risk_chart(stability_score)
+    SofieBriefing().generate_brief(stability_score, data)
+    SofieAlerts().get_top_threats()
 
 if __name__ == "__main__":
     main()
