@@ -67,6 +67,27 @@ class SofieDataEngine:
         except:
             return ["Argentina", "Belarus", "Bolivia", "Cameroon"]
 
+    def get_port_friction_map(self):
+        """Extracts a dictionary of countries and their median port stay times."""
+        port_file = os.path.join(self.root, "Black Swan/Maritime Port Performance Project Dataset.csv")
+        try:
+            df = pd.read_csv(port_file)
+            
+            # Find the Economy and Median Time columns
+            economy_col = self._find_column(df, ['economy', 'country', 'label'])
+            time_col = self._find_column(df, ['median_time', 'port_stay', 'value'])
+            
+            if economy_col and time_col:
+                # Convert time to numeric and group by country
+                df[time_col] = pd.to_numeric(df[time_col], errors='coerce')
+                # Average the time per country (taking the latest available)
+                friction_data = df.groupby(economy_col)[time_col].mean().to_dict()
+                return friction_data
+            return {}
+        except Exception as e:
+            print(f"!! Friction Map Data Error: {e}")
+            return {}
+
     def run_all(self):
         return {
             "fatalities": self.get_conflict_pulse(),
