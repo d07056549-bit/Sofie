@@ -1,53 +1,45 @@
-import geopandas as gpd
 import matplotlib.pyplot as plt
+import geopandas as gpd
+import pandas as pd
 import os
-import requests
 
 class LogisticsMapper:
     def __init__(self, output_path="exports/"):
         self.output_path = output_path
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        os.makedirs(output_path, exist_ok=True)
 
-    def generate_heatmap(self, friction_dict):
-        world_url = "https://raw.githubusercontent.com/python-visualization/folium/master/examples/data/world-countries.json"
-        
+    def generate_heatmap(self, friction_data):
+        """Generates a port-specific friction heatmap without aspect errors."""
         try:
-            # 1. Fetch map
-            response = requests.get(world_url)
-            data = response.json()
-            world = gpd.GeoDataFrame.from_features(data, crs="EPSG:4326")
+            # 1. Silence the downcasting warning
+            pd.set_option('future.no_silent_downcasting', True)
             
-            # 2. Map the friction data (Median hours in port)
-            # We assume friction_dict key is country name
-            world['port_delay'] = world['name'].map(friction_dict).fillna(0)
+            # 2. Load World Map
+            world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+            
+            fig, ax = plt.subplots(figsize=(15, 10))
+            
+            # Set explicit aspect to prevent the 'finite and positive' crash
+            ax.set_aspect('equal') 
+            
+            world.plot(ax=ax, color='#1a1a1a', edgecolor='#333333')
+            
+            # 3. Plot Port Data
+            for port, data in friction_data.items():
+                color = 'red' if data['friction'] > 4.0 else 'orange' if data['friction'] > 2.5 else 'lime'
+                ax.scatter(data['lon'], data['lat'], 
+                           s=data['friction'] * 50, 
+                           c=color, alpha=0.7, edgecolors='white', linewidth=0.5)
+                ax.text(data['lon'] + 2, data['lat'], port, color='white', fontsize=8, alpha=0.8)
 
-            fig, ax = plt.subplots(1, 1, figsize=(15, 8), facecolor='#0f172a') # Deep Navy
+            ax.set_title("GLOBAL MARITIME LOGISTICS & PORT FRICTION", color='cyan', fontsize=14)
+            ax.set_axis_off()
             
-            # Base Map
-            world.plot(ax=ax, color='#1e293b', edgecolor='#334155', linewidth=0.5)
-            
-            # Heatmap Layer (Yellow to Purple/Red for delays)
-            # High delays = 'Inferno' or 'YlOrRd'
-            world[world.port_delay > 0].plot(
-                column='port_delay', 
-                ax=ax, 
-                cmap='YlOrRd', 
-                legend=True,
-                legend_kwds={'label': "Median Hours in Port", 'orientation': "horizontal", 'shrink': 0.5},
-                edgecolor='black',
-                linewidth=0.3
-            )
-            
-            plt.title("GLOBAL LOGISTICS FRICTION | PORT PERFORMANCE MARCH 2026", 
-                      fontsize=18, fontweight='bold', color='white', pad=20)
-            
-            ax.axis('off')
-            
-            map_file = os.path.join(self.output_path, "logistics_heatmap_march_22.png")
-            plt.savefig(map_file, dpi=200, bbox_inches='tight', facecolor='#0f172a')
+            # 4. Save
+            plt.savefig(os.path.join(self.output_path, "logistics_heatmap_march_22.png"), 
+                        bbox_inches='tight', facecolor='#0d0d0d')
             plt.close()
-            print(f"-> Logistics Heatmap Exported: {map_file}")
+            print("-> Logistics Heatmap Exported: exports/logistics_heatmap_march_22.png")
             
         except Exception as e:
             print(f"!! LOGISTICS MAP FAILURE: {e}")
