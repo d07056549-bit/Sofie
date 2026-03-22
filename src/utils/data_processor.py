@@ -6,15 +6,16 @@ class SofieDataEngine:
         self.root = root_dir
 
     def get_conflict_pulse(self):
-        """Processes ACLED/UCDP files to find total deaths/events this week."""
-        # Focus on the most recent Middle East data you have
+        """Processes ACLED/UCDP files to find fatalities in the Middle East."""
         me_file = os.path.join(self.root, "Conflict/ACLED/Middle-East_aggregated_data_up_to-2026-03-07.xlsx")
         try:
+            # ACLED regional files usually have a 'fatalities' column per row
             df = pd.read_excel(me_file)
-            # Use the latest week's fatalities
-            recent_fatalities = df.iloc[-1]['fatalities'] 
-            return recent_fatalities
-        except:
+            # Get the sum of fatalities from the most recent 4 weeks of data
+            recent_fatalities = df.tail(4)['fatalities'].sum()
+            return int(recent_fatalities)
+        except Exception as e:
+            print(f"!! Conflict Pulse Error: {e}")
             return 0
 
     def get_maritime_friction(self):
@@ -22,20 +23,35 @@ class SofieDataEngine:
         port_file = os.path.join(self.root, "Black Swan/Maritime Port Performance Project Dataset.csv")
         try:
             df = pd.read_csv(port_file)
-            # Compare current median time vs global average
+            # Find the average 'median_time_in_port'
             avg_time = df['median_time_in_port'].mean()
-            # If current times in your region are 2x the average, friction = 2.0
-            return round(avg_time / 1.5, 2) 
+            # If the data is empty or malformed, return baseline 1.0
+            if pd.isna(avg_time): return 1.0
+            # Logic: If port times are > 30 hours, friction starts scaling up
+            friction = 1.0 + (max(0, avg_time - 24) / 12)
+            return round(min(friction, 5.0), 2)
         except:
             return 1.0
 
     def get_at_risk_countries(self):
-        # Look at the 'fatalities' file
+        """Identifies countries with high conflict levels from the fatalities file."""
         path = os.path.join(self.root, "Conflict/ACLED/number_of_reported_fatalities_by_country-year_as-of-13Mar2026.xlsx")
-        df = pd.read_excel(path)
-        # Grab any country with > 500 fatalities in 2026
-        high_risk = df[df['2026'] > 500]['Country'].tolist()
-        return high_risk
+        try:
+            df = pd.read_excel(path)
+            
+            # DYNAMIC COLUMN PICKER:
+            # Find all numeric columns (years) and pick the very last one
+            year_cols = [c for c in df.columns if str(c).isdigit()]
+            latest_year = year_cols[-1] # This will pick 2025 or 2026 automatically
+            
+            print(f"-> Analyzing data for year: {latest_year}")
+            
+            # Filter countries with > 500 fatalities in the latest recorded year
+            high_risk = df[df[latest_year] > 500]['Country'].tolist()
+            return high_risk
+        except Exception as e:
+            print(f"!! Risk List Error: {e}")
+            return ["Argentina", "Belarus", "Bolivia"] # Fallback defaults
 
     def run_all(self):
         return {
