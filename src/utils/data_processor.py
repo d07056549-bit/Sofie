@@ -48,22 +48,17 @@ class SofieDataEngine:
         except:
             return 1.0
 
- def get_migration_pressure(self):
-        """Identifies top asylum seeker destinations with optimized data types."""
+    def get_migration_pressure(self):
+        """Identifies top asylum seeker destinations. Fixed Dtype Warning."""
         path = os.path.join(self.root, "Migration & Refugee Flows/asylum_seekers.csv")
         try:
-            # Added low_memory=False to stop the DtypeWarning
-            # This forces Pandas to analyze the whole file at once
+            # low_memory=False handles mixed types in large migration files
             df = pd.read_csv(path, low_memory=False)
-            
             country_col = self._find_column(df, ['country', 'asylum'])
-            
             if country_col:
-                # Grouping by asylum destination to see where the 2026 pressure is highest
                 return df.groupby(country_col).size().sort_values(ascending=False).head(5).index.tolist()
             return []
-        except Exception as e:
-            print(f"!! Migration Data Parse Error: {e}")
+        except:
             return []
 
     def get_at_risk_countries(self):
