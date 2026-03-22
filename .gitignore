@@ -205,3 +205,19 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- SOFIE DATA SHIELD ---
+# We keep the code on GitHub, but the intelligence stays local.
+data/
+exports/
+*.csv
+*.xlsx
+*.xls
+*.json
+*.pdf
+*.zip
+*.txt
+*.png
+*.jpg
+!requirements.txt
+!README.md
