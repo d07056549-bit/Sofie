@@ -27,7 +27,7 @@ def main():
 
     print("="*55)
     print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"DATE: March 22, 2026 | TIME: 21:40 GMT")
+    print(f"DATE: March 22, 2026 | TIME: {datetime.now().strftime('%H:%M')} GMT")
     print("="*55 + "\n")
 
     # 2. Data Ingestion (CSVs + News)
@@ -35,7 +35,6 @@ def main():
     live_stats = data_engine.run_all()
     
     # 3. Crisis Intelligence Multiplier
-    # Logic: If 'blockade' is in the news, global fragility spikes by 40%
     news_multiplier = 1.0
     if os.path.exists("news_feed.txt"):
         with open("news_feed.txt", "r") as f:
@@ -43,20 +42,10 @@ def main():
             if any(word in news for word in ["blockade", "strike", "ultimatum"]):
                 news_multiplier = 1.4
 
-    # 3.5 Market Opening Escalation
-    # If it's Sunday night (March 22) after 22:00 GMT, add "Opening Panic"
-    current_hour = datetime.now().hour
-    market_panic = 0
-    if current_hour >= 22:
-        print("!! WARNING: Asian Market Opening approaching. Adding +5.0 volatility.")
-        market_panic = 5.0
-    
-    stability_score = round(oil_comp + fric_comp + risk_comp + market_panic, 2)
-
     # 4. Scenario Definitions
     scenarios = {
         'baseline': {
-            'oil_price': 112.19, # Current Brent Spot
+            'oil_price': 112.19, 
             'port_friction': live_stats['friction'] * news_multiplier,
             'sovereign_risk_entities': 96 + (live_stats['fatalities'] // 200)
         },
@@ -67,30 +56,28 @@ def main():
 
     # 5. Stability Index Calculation
     curr = scenarios[args.scenario]
+    
+    # Define variables clearly before the final calculation
     oil_comp = (min(curr['oil_price'], 200) / 200) * 45
     fric_comp = (min(curr['port_friction'], 5) / 5) * 30
     risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
-    stability_score = round(oil_comp + fric_comp + risk_comp, 2)
+    
+    # 5.5 Market Opening Escalation (Sunday Night Logic)
+    market_panic = 0
+    if datetime.now().hour >= 22:
+        print("!! WARNING: Asian Market Opening approaching. Adding +5.0 volatility.")
+        market_panic = 5.0
+        
+    stability_score = round(oil_comp + fric_comp + risk_comp + market_panic, 2)
 
     print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-    # 6. Map Generation (Risk & Logistics)
+    # 6. Map Generation
     at_risk_list = data_engine.get_at_risk_countries()
     SofieMapper().generate_risk_map(at_risk_list)
     
     friction_data = data_engine.get_port_friction_map()
     LogisticsMapper().generate_heatmap(friction_data)
-
-    # NEW: Market Volatility logic
-    # The higher the VIX, the more every other risk (Oil/Friction) is magnified
-    vol_multiplier = live_stats['volatility'] 
-    
-    # NEW: Stability Calculation
-    # We factor in the 'Vulnerability' of countries to the energy spike
-    stability_score = round(oil_comp + (fric_comp * vol_multiplier) + risk_comp, 2)
-    
-    # Add migration hotspots to the map automatically
-    at_risk_list = list(set(at_risk_list + live_stats['migration_hotspots']))
 
     # 7. Dashboard & Logging
     SofieVisualizer().generate_risk_chart(stability_score, curr)
@@ -101,11 +88,9 @@ def main():
     print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
     if stability_score > 75:
         print("STATUS: CRITICAL WATCH. Ultimatum expires in <36 hours.")
-        print(f"ALERT: Contagion detected in {at_risk_list[:3]}.")
     else:
         print("STATUS: STABLE. No immediate kinetic escalation detected.")
     print("="*55)
-    print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
 
 if __name__ == "__main__":
     main()
