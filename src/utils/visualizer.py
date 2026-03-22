@@ -5,56 +5,51 @@ import os
 class SofieVisualizer:
     def __init__(self, output_path="exports/"):
         self.output_path = output_path
+        # Ensure the export directory exists
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path)
 
     def generate_risk_chart(self, score, data):
-        # We are moving to a 3-row layout to fit the trendline
-        fig = plt.figure(figsize=(12, 14))
-        gs = fig.add_gridspec(3, 2)
+        """Generates a multi-panel intelligence dashboard for the current scenario."""
+        # Create a tall figure to accommodate the news feed at the bottom
+        fig = plt.figure(figsize=(14, 16))
+        gs = fig.add_gridspec(4, 2, height_ratios=[1, 1, 1, 0.6])
         
-        fig.suptitle(f"SOFIE INTELLIGENCE DASHBOARD | INDEX: {score}", fontsize=18, fontweight='bold')
+        fig.suptitle(f"SOFIE INTELLIGENCE DASHBOARD | GLOBAL FRAGILITY: {score}", 
+                     fontsize=22, fontweight='bold', y=0.98)
 
-        # --- ROW 1: Gauge & Energy ---
+        # --- PANEL 1: STABILITY GAUGE (Top Left) ---
         ax1 = fig.add_subplot(gs[0, 0])
-        ax1.barh(['Stability'], [100], color='lightgrey')
-        ax1.barh(['Stability'], [score], color='red' if score > 70 else 'orange')
-        ax1.set_title("Current Fragility Gauge")
+        color = '#d63031' if score > 70 else '#fdcb6e'
+        ax1.barh(['Stability'], [100], color='#dfe6e9')
+        ax1.barh(['Stability'], [score], color=color)
+        ax1.set_xlim(0, 100)
+        ax1.set_title("Current Fragility Index", fontsize=14, fontweight='bold')
+        ax1.grid(axis='x', linestyle='--', alpha=0.3)
 
+        # --- PANEL 2: ENERGY SHOCK (Top Right) ---
         ax2 = fig.add_subplot(gs[0, 1])
-        ax2.bar(['Oil Price'], [data['oil_price']], color='black')
-        ax2.axhline(y=75, color='green', linestyle='--', label='Baseline')
-        ax2.set_title(f"Energy: ${data['oil_price']}/bbl")
+        oil_val = data.get('oil_price', 0)
+        ax2.bar(['Brent Crude'], [oil_val], color='#2d3436')
+        ax2.axhline(y=75, color='#00b894', linestyle='--', label='Pre-Crisis Baseline ($75)')
+        ax2.set_ylim(0, 200)
+        ax2.set_title(f"Energy Market: ${oil_val}/bbl", fontsize=14, fontweight='bold')
         ax2.legend()
 
-        # --- ROW 2: Logistics & Debt ---
+        # --- PANEL 3: MARITIME FRICTION (Middle Left) ---
         ax3 = fig.add_subplot(gs[1, 0])
-        ax3.bar(['Port Friction'], [data['port_friction']], color='darkred')
-        ax3.set_title(f"Maritime Friction: {data['port_friction']}x")
+        friction = data.get('port_friction', 1.0)
+        ax3.bar(['Port Friction'], [friction], color='#e17055')
+        ax3.axhline(y=1.0, color='#0984e3', linestyle='--', label='Normal Flow')
+        ax3.set_ylim(0, 6)
+        ax3.set_title(f"Logistics Friction: {friction}x", fontsize=14, fontweight='bold')
+        ax3.legend()
 
+        # --- PANEL 4: SOVEREIGN RISK DISTRIBUTION (Middle Right) ---
         ax4 = fig.add_subplot(gs[1, 1])
         risk_count = data.get('sovereign_risk_entities', 96)
-        ax4.pie([risk_count, 195-risk_count], labels=['At Risk', 'Stable'], colors=['#ff4d4d', '#d3d3d3'], autopct='%1.1f%%')
-        ax4.set_title("Global Default Risk")
-
-        # --- ROW 3: THE TRENDLINE (NEW) ---
-        ax5 = fig.add_subplot(gs[2, :]) # Span both columns
-        history_file = os.path.join(self.output_path, "stability_history.csv")
-        
-        if os.path.exists(history_file):
-            df = pd.read_csv(history_file)
-            # Take the last 10 runs to keep it clean
-            df = df.tail(10)
-            ax5.plot(df['Timestamp'], df['Score'], marker='o', linestyle='-', color='blue', linewidth=2)
-            ax5.fill_between(df['Timestamp'], df['Score'], color='blue', alpha=0.1)
-            ax5.set_ylim(0, 110)
-            ax5.set_title("Stability Trend (Last 10 Runs)")
-            ax5.tick_params(axis='x', rotation=45)
-            ax5.grid(True, linestyle='--', alpha=0.6)
-        else:
-            ax5.text(0.5, 0.5, "Insufficient History Data", ha='center')
-
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.savefig(os.path.join(self.output_path, "stability_report_march_22.png"))
-        plt.close()
-        print(f"-> Multi-Trend Dashboard Exported.")
+        # Assuming 195 total nations
+        ax4.pie([risk_count, 195-risk_count], 
+                labels=['At Risk', 'Stable'], 
+                colors=['#ff7675', '#b2bec3'], 
+                autopct='%1.1f%%', start
