@@ -63,7 +63,7 @@ def main():
     
     # --- BLACK SWAN LOGIC ---
     black_swan_multiplier = 1.0
-    if live_stats['black_swan_event']:
+    if live_stats['black_swan_active']:
         # Each critical cyber event adds a 20% multiplier to the global fragility
         black_swan_multiplier = 1.0 + (live_stats['swan_severity'] * 0.2)
         print(f"!!! BLACK SWAN DETECTED: Digital Infrastructure compromised. Multiplier: {black_swan_multiplier}x")
