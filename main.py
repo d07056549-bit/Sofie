@@ -86,6 +86,18 @@ def main():
         print("ACTION: Standard monitoring. No immediate kinetic threats detected.")
     print("="*50)
 
+    # Final Intelligence Sign-off
+    print("\n" + "!"*50)
+    print("SOFIE INTELLIGENCE ADVISORY")
+    if stability_score >= 100:
+        print("STATUS: BLACKOUT. All predictive models saturated. Systemic failure in progress.")
+    elif stability_score > 75:
+        print("STATUS: HIGH ALERT. Logistics friction holding at 1.0x but Energy shock is critical.")
+        print(f"ULTIMATUM REMAINING: ~31 Hours. Watch for escalation in the Indian Ocean.")
+    else:
+        print("STATUS: STABLE. Monitoring baseline fluctuations.")
+    print("!"*50 + "\n")
+
     print("\n" + "="*50)
     print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---")
     print("="*50)
