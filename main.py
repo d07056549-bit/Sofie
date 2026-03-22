@@ -81,6 +81,17 @@ def main():
     friction_data = data_engine.get_port_friction_map()
     LogisticsMapper().generate_heatmap(friction_data)
 
+    # NEW: Market Volatility logic
+    # The higher the VIX, the more every other risk (Oil/Friction) is magnified
+    vol_multiplier = live_stats['volatility'] 
+    
+    # NEW: Stability Calculation
+    # We factor in the 'Vulnerability' of countries to the energy spike
+    stability_score = round(oil_comp + (fric_comp * vol_multiplier) + risk_comp, 2)
+    
+    # Add migration hotspots to the map automatically
+    at_risk_list = list(set(at_risk_list + live_stats['migration_hotspots']))
+
     # 7. Dashboard & Logging
     SofieVisualizer().generate_risk_chart(stability_score, curr)
     record_history(stability_score, args.scenario)
