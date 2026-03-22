@@ -134,6 +134,6 @@ class SofieDataEngine:
             "friction": self.get_maritime_friction(),
             "volatility": self.get_market_volatility(),
             "migration_hotspots": self.get_migration_pressure(),
-            "black_swan_active": is_cyber_swan or is_phys_swan,
-            "swan_intensity": (cyber_sev + (phys_sev / 10)) # Weighted severity
+            "black_swan_event": is_cyber_swan or is_phys_swan,
+            "swan_severity": (cyber_sev + (phys_sev / 10)) # Weighted severity
         }
