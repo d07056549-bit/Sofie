@@ -1,99 +1,85 @@
-import argparse
 import os
-from datetime import datetime
+import time
+import numpy as np
 import pandas as pd
+from datetime import datetime
 from src.utils.data_processor import SofieDataEngine
-from src.utils.visualizer import SofieVisualizer
+
+def apply_stochastic_shock(base_score, volatility_factor):
+    """
+    LAYER 1: Cauchy 'Fat-Tail' Math.
+    Simulates unpredictable market jumps.
+    """
+    # standard_cauchy creates the 'Black Swan' outliers.
+    # We scale it by the swan_severity to control impact.
+    shock = np.random.standard_cauchy() * volatility_factor
+    final_score = base_score + shock
+    
+    # Cap the index between 0 (Peace) and 150 (Total Collapse)
+    return round(np.clip(final_score, 0, 150), 2)
 
 def main():
-    parser = argparse.ArgumentParser(description="SOFIE: Strategic Operations & Fragility Intelligence Engine")
-    parser.add_argument('--scenario', type=str, default='baseline', help='Target scenario: baseline, peace, blackout')
-    args = parser.parse_args()
-
-    # 1. System Initialization
-    print("=======================================================")
+    print("=" * 55)
     print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"DATE: March 22, 2026 | TIME: {datetime.now().strftime('%H:%M')} GMT")
-    print("=======================================================")
+    now = datetime.now()
+    print(f"DATE: {now.strftime('%B %d, %Y')} | TIME: {now.strftime('%H:%M')} GMT")
+    print("=" * 55)
 
+    # Initialize the Data Engine (with Circuit Breakers)
     engine = SofieDataEngine()
-    viz = SofieVisualizer()
-
-    # 2. Live Data Sensing (The run_all handshake)
+    
+    # --- DATA ACQUISITION ---
+    # run_all() returns a dictionary of all tactical sensors
     live_stats = engine.run_all()
 
-    # 3. Scenario Matrix
-    scenarios = {
-        'peace': {
-            'oil_price': 72.0,
-            'port_friction': 1.0,
-            'sovereign_risk_entities': 12
-        },
-        'baseline': {
-            'oil_price': 94.50,
-            'port_friction': live_stats['friction'],
-            'sovereign_risk_entities': 45
-        },
-        'ultimatum_expires': {
-            'oil_price': 145.0,
-            'port_friction': 3.5,
-            'sovereign_risk_entities': 110
-        }
-    }
+    # --- BASELINE CALCULATION ---
+    # Components of the Stability Index
+    conflict_friction = live_stats.get('fatalities', 0) * 0.05
+    maritime_friction = (live_stats.get('friction', 1.0) - 1.0) * 10
+    market_volatility = live_stats.get('volatility', 20.0) / 4
+    
+    raw_base_score = 40.0 + conflict_friction + maritime_friction + market_volatility
 
-    # 4. Stability Index Calculation Logic
-    curr = scenarios.get(args.scenario, scenarios['baseline'])
-    
-    # Normalized components (0-100 scale)
-    oil_comp = (min(curr['oil_price'], 200) / 200) * 45
-    fric_comp = (min(curr['port_friction'], 5) / 5) * 30
-    risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
-    
-    # 5. Black Swan Logic (Handshake with Data Engine)
-    # Using .get() for robustness against KeyErrors
+    # --- TIME-BASED LOGIC (March 22nd Escalation) ---
+    # If past 22:00 GMT, add the 'Monday Morning' Market Opening panic
+    if now.hour >= 22:
+        raw_base_score += 5.0
+
+    # --- BLACK SWAN MULTIPLIER ---
     black_swan_multiplier = 1.0
+    # Use .get() to avoid KeyErrors if the sensor is offline
     if live_stats.get('black_swan_active', False):
-        severity = live_stats.get('swan_intensity', 0)
-        # Each severity unit adds 20% systemic risk
-        black_swan_multiplier = 1.0 + (severity * 0.2)
-        print(f"!!! BLACK SWAN DETECTED: Digital Infrastructure compromised. Multiplier: {black_swan_multiplier}x")
+        severity = live_stats.get('swan_severity', 0)
+        # 1.6x multiplier for critical cyber/mobility events
+        black_swan_multiplier = 1.0 + (severity * 0.1)
+        print(f"!!! BLACK SWAN DETECTED: Digital/Physical Multiplier {black_swan_multiplier:.1f}x Applied !!!")
 
-    # 6. Time-Based Escalation (The 22:00 GMT Rule)
-    market_panic = 0
-    if datetime.now().hour >= 22:
-        market_panic = 5.0
-        # This reflects the Asian Market Open volatility on Sunday night
+    # --- FINAL STOCHASTIC ENGINE ---
+    # Apply the Cauchy Shock based on current system volatility
+    final_raw = raw_base_score * black_swan_multiplier
+    stability_index = apply_stochastic_shock(final_raw, live_stats.get('swan_severity', 1.0))
+
+    # --- SITREP OUTPUT ---
+    print("-" * 55)
+    print(f"STABILITY INDEX: {stability_index}")
+    print(f"STATUS: {'CRITICAL' if stability_index > 80 else 'UNSTABLE' if stability_index > 60 else 'STABLE'}")
     
-    # Final Composite Score
-    stability_score = round((oil_comp + fric_comp + risk_comp + market_panic) * black_swan_multiplier, 2)
-    stability_score = min(stability_score, 100.0) if black_swan_multiplier == 1.0 else stability_score
-
-    # 7. Persistence (Stability History)
+    if stability_index > 80:
+        print("-> ALERT: Systemic risk exceeds 80th percentile. Deploying countermeasures.")
+    
+    # --- EXPORT TO HISTORY ---
     history_file = "stability_history.csv"
     new_entry = pd.DataFrame([{
-        'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M'),
-        'Scenario': args.scenario,
-        'Score': stability_score
+        "Timestamp": now.strftime("%Y-%m-%d %H:%M"),
+        "Scenario": "baseline",
+        "Score": stability_index
     }])
+    
     new_entry.to_csv(history_file, mode='a', header=not os.path.exists(history_file), index=False)
-
-    # 8. Visual Export
-    viz.generate_risk_chart(stability_score, live_stats)
     
-    # 9. SITREP Summary
-    status = "STABLE"
-    if stability_score > 50: status = "ELEVATED"
-    if stability_score > 75: status = "CRITICAL WATCH"
-    
-    print(f"-> Geographic Heatmap Exported: exports/risk_map_march_22.png")
-    print(f"-> Logistics Heatmap Exported: exports/logistics_heatmap_march_22.png")
-    print(f"-> Multi-Panel Intelligence Dashboard Exported: exports/stability_report_march_22.png")
-    print("=======================================================")
-    print(f"--- SITREP SUMMARY: MARCH 22, 2026 ---")
-    print(f"STATUS: {status}. Stability Index: {stability_score}")
-    if status == "CRITICAL WATCH":
-        print("ALERT: Ultimatum expires in <36 hours. Prepare for secondary shocks.")
-    print("=======================================================")
+    print("=" * 55)
+    print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
+    print(f"ULTIMATUM EXPIRES IN <{36 if now.hour < 22 else 34} HOURS.")
 
 if __name__ == "__main__":
     main()
