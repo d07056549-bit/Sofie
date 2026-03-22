@@ -1,7 +1,6 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import os
-from geodatasets import get_path # <--- NEW REPLACEMENT
 
 class SofieMapper:
     def __init__(self, output_path="exports/"):
@@ -10,31 +9,43 @@ class SofieMapper:
             os.makedirs(self.output_path)
 
     def generate_risk_map(self, at_risk_countries):
-        # The new way to get the world map in GeoPandas 1.0+
-        path = get_path("naturalearth.lowres")
-        world = gpd.read_file(path)
+        # Using a direct URL to bypass local dataset issues
+        world_url = "https://raw.githubusercontent.com/holtzy/The-Python-Graph-Gallery/master/static/data/world.geojson"
         
-        # Match country names to your risk list
-        # Note: We use .str.contains or direct match depending on your data
-        world['risk_level'] = world['name'].apply(lambda x: 1 if x in at_risk_countries else 0)
+        try:
+            world = gpd.read_file(world_url)
+            
+            # Note: GeoJSON usually names the column 'name' or 'NAME'
+            # We normalize to handle both
+            world['risk_level'] = world['name'].apply(lambda x: 1 if x in at_risk_countries else 0)
 
-        fig, ax = plt.subplots(1, 1, figsize=(15, 8))
-        
-        # Plotting
-        # Grey = Stable/Neutral, Red = At Risk
-        world.plot(column='risk_level', ax=ax, cmap='OrRd', edgecolors='black', 
-                   linewidth=0.5, legend=False, missing_kwds={'color': 'lightgrey'})
-        
-        plt.title("SOFIE GLOBAL RISK MAP | NEXUS EVENT: MARCH 22, 2026", 
-                  fontsize=16, fontweight='bold', pad=20)
-        
-        # Add a small note about the 48-hour ultimatum
-        ax.annotate('STATION STATUS: CRITICAL WATCH', xy=(0.05, 0.05), 
-                    xycoords='axes fraction', fontsize=10, color='red', weight='bold')
-        
-        ax.axis('off')
-        
-        map_file = os.path.join(self.output_path, "risk_map_march_22.png")
-        plt.savefig(map_file, dpi=200, bbox_inches='tight')
-        plt.close()
-        print(f"-> Geographic Heatmap Exported: {map_file}")
+            fig, ax = plt.subplots(1, 1, figsize=(15, 8), facecolor='#f0f0f0')
+            
+            # Base Layer (Grey for stable countries)
+            world.plot(ax=ax, color='#dfe6e9', edgecolor='white', linewidth=0.5)
+            
+            # Risk Layer (Red for flagged countries)
+            world[world.risk_level == 1].plot(ax=ax, color='#d63031', edgecolor='black', linewidth=0.8)
+            
+            plt.title("SOFIE GLOBAL RISK MAP | NEXUS EVENT: MARCH 22, 2026", 
+                      fontsize=18, fontweight='bold', color='#2d3436', pad=20)
+            
+            # Legend/Status indicator
+            ax.annotate('STATION STATUS: CRITICAL WATCH', xy=(0.02, 0.05), 
+                        xycoords='axes fraction', fontsize=12, color='#d63031', 
+                        weight='bold', bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.8))
+            
+            # Tactical coordinates for the current conflict (Middle East)
+            # Strait of Hormuz is approx 26N, 56E
+            ax.plot(56, 26, marker='x', color='blue', markersize=10, mew=2, label='Conflict Zone')
+
+            ax.axis('off')
+            
+            map_file = os.path.join(self.output_path, "risk_map_march_22.png")
+            plt.savefig(map_file, dpi=200, bbox_inches='tight', facecolor='#f0f0f0')
+            plt.close()
+            print(f"-> Geographic Heatmap Exported: {map_file}")
+            
+        except Exception as e:
+            print(f"!! MAP ERROR: {e}")
+            print("-> Attempting fallback: Check your internet connection for GeoJSON fetch.")
