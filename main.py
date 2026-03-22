@@ -1,5 +1,5 @@
 import os
-# --- LINE 1 & 2: SILENCE WARNINGS ---
+# --- LINE 1 & 2: SILENCE WARNINGS & PATH SETUP ---
 os.environ["PYTENSOR_FLAGS"] = "cxx="
 
 import argparse
@@ -17,12 +17,13 @@ except ImportError:
 # Layer 1: Sensing (Robust Data Engine)
 from src.utils.data_processor import SofieDataEngine
 
-# --- ADDED: DEDICATED HISTORY FUNCTION ---
+# Define the global export path
+EXPORT_DIR = os.path.join(os.getcwd(), "exports")
+os.makedirs(EXPORT_DIR, exist_ok=True)
+
 def update_history(scenario, score):
-    """Logs the unique run score to the exports folder."""
-    os.makedirs("exports", exist_ok=True) 
-    history_path = os.path.join("exports", "stability_history.csv")
-    
+    """Logs the unique run score specifically to the exports folder."""
+    history_path = os.path.join(EXPORT_DIR, "stability_history.csv")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     new_entry = pd.DataFrame([[timestamp, scenario, score]], columns=["Timestamp", "Scenario", "Score"])
     
@@ -32,10 +33,12 @@ def update_history(scenario, score):
         new_entry.to_csv(history_path, index=False)
 
 def calculate_nexus_score(live_stats, hours_to_deadline=34):
-    """Layer 2: Math with Temporal Stress"""
+    """Layer 2: Math - Stochastic Stability with Temporal Stress."""
     fatalities_comp = live_stats.get('fatalities', 0) / 20
     friction_comp = live_stats.get('friction', 1.0) * 10
     volatility_comp = live_stats.get('volatility', 1.0) * 15
+    
+    # Temporal Stress factor
     time_stress = 50 / (hours_to_deadline + 1)
     
     is_swan = live_stats.get('black_swan_active', False)
@@ -48,7 +51,7 @@ def calculate_nexus_score(live_stats, hours_to_deadline=34):
     return round(np.clip(base_score + shock, 0, 150), 2)
 
 def run_bayesian_probability(current_score, swan_active):
-    """Layer 3: Bayesian Logic"""
+    """Layer 3: Bayesian Logic - Calculates Breach Probability."""
     if not pm or current_score < 40:
         return 5.2 
     try:
@@ -61,15 +64,25 @@ def run_bayesian_probability(current_score, swan_active):
         return 5.2
 
 def generate_dashboard(score, prob, status):
-    """Visual Intelligence Report (PNG)"""
+    """Creates the Visual Intelligence Report (PNG) in the exports folder."""
     plt.style.use('dark_background')
     fig, ax = plt.subplots(figsize=(10, 6))
+    
     color = 'red' if score > 70 else 'orange' if score > 40 else 'green'
     ax.barh(['Stability Index'], [score], color=color, alpha=0.6)
     ax.set_xlim(0, 150)
+    
     plt.title(f"SOFIE SITREP: {status} | {datetime.now().strftime('%H:%M')} GMT", fontsize=14, color='cyan')
+    plt.xlabel("Index Value (0-150)")
+    plt.grid(axis='x', linestyle='--', alpha=0.3)
+    
     plt.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
-    plt.savefig("stability_report_march_22.png")
+    plt.text(5, -0.2, f"Systemic Status: {status}", fontsize=12, color=color, fontweight='bold')
+
+    plt.tight_layout()
+    # Save specifically to the exports directory
+    report_path = os.path.join(EXPORT_DIR, "stability_report_march_22.png")
+    plt.savefig(report_path)
     plt.close()
 
 def main():
@@ -82,6 +95,8 @@ def main():
     
     print("=======================================================")
     print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
+    print(f"DATE: {datetime.now().strftime('%B %d, %Y | TIME: %H:%M')} GMT")
+    print(f"TARGET DIRECTORY: {EXPORT_DIR}")
     print("=======================================================")
 
     try:
@@ -90,16 +105,15 @@ def main():
         prob_breach = run_bayesian_probability(stability_score, live_stats.get('black_swan_active', False))
         status = "CRITICAL" if stability_score > 90 else "UNSTABLE" if stability_score > 70 else "STABLE"
         
-        # --- CALL THE UPDATED HISTORY FUNCTION ---
+        # All exports handled by the functions using EXPORT_DIR
         update_history(args.scenario, stability_score)
-
         generate_dashboard(stability_score, prob_breach, status)
 
         print("-------------------------------------------------------")
         print(f"STABILITY INDEX: {stability_score}")
         print(f"PROBABILITY OF SYSTEMIC BREACH: {prob_breach}%")
         print(f"STATUS: {status}")
-        print(f"✅ LOGGED TO: exports/stability_history.csv")
+        print(f"✅ ALL EXPORTS SAVED TO: /exports/")
         
         if live_stats.get('black_swan_active'):
             print(f"!!! BLACK SWAN ALERT: Severity {round(live_stats['swan_severity'], 2)} Detected !!!")
