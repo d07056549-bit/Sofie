@@ -64,27 +64,33 @@ def run_bayesian_probability(current_score, swan_active):
         return 5.2
 
 def generate_dashboard(score, prob, status):
-    """Creates the Visual Intelligence Report (PNG) in the exports folder."""
+    """Restores the multi-chart dashboard with a Live Feed ticker."""
     plt.style.use('dark_background')
-    fig, ax = plt.subplots(figsize=(10, 6))
+    # Create 2 rows: Top for Graphs, Bottom for the 'Live Feed' ticker
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [3, 1]})
     
+    # --- CHART 1: STABILITY INDEX ---
     color = 'red' if score > 70 else 'orange' if score > 40 else 'green'
-    ax.barh(['Stability Index'], [score], color=color, alpha=0.6)
-    ax.set_xlim(0, 150)
-    
-    plt.title(f"SOFIE SITREP: {status} | {datetime.now().strftime('%H:%M')} GMT", fontsize=14, color='cyan')
-    plt.xlabel("Index Value (0-150)")
-    plt.grid(axis='x', linestyle='--', alpha=0.3)
-    
-    plt.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
-    plt.text(5, -0.2, f"Systemic Status: {status}", fontsize=12, color=color, fontweight='bold')
+    ax1.barh(['Stability Index'], [score], color=color, alpha=0.6)
+    ax1.set_xlim(0, 150)
+    ax1.set_title(f"SOFIE SYSTEMIC MONITOR | {datetime.now().strftime('%H:%M')} GMT", color='cyan')
+    ax1.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
+    ax1.grid(axis='x', linestyle='--', alpha=0.2)
+
+    # --- LIVE FEED TICKER ---
+    ax2.axis('off')  # Hide axes for the ticker area
+    feed_text = (
+        f">>> [SYSTEM STATUS: {status}]\n"
+        f">>> [MARCH 22 EVENT DETECTED: Severity {score/10:.1f}]\n"
+        f">>> [CAUSAL CHAIN: Digital -> Financial -> Infrastructure]\n"
+        f">>> [TIME TO ULTIMATUM: 34 HOURS]"
+    )
+    ax2.text(0.01, 0.5, feed_text, color='lime', fontfamily='monospace', fontsize=10, va='center')
 
     plt.tight_layout()
-    # Save specifically to the exports directory
     report_path = os.path.join(EXPORT_DIR, "stability_report_march_22.png")
     plt.savefig(report_path)
     plt.close()
-
 def main():
     parser = argparse.ArgumentParser(description="SOFIE EVOLVED v2.0")
     parser.add_argument("--scenario", type=str, default="baseline")
