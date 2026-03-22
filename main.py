@@ -63,29 +63,50 @@ def run_bayesian_probability(current_score, swan_active):
     except:
         return 5.2
 
-def generate_dashboard(score, prob, status):
-    """Restores the multi-chart dashboard with a Live Feed ticker."""
+ddef generate_dashboard(score, prob, status):
+    """Restores the multi-panel dashboard with Graphs and a Live Feed."""
     plt.style.use('dark_background')
-    # Create 2 rows: Top for Graphs, Bottom for the 'Live Feed' ticker
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [3, 1]})
     
-    # --- CHART 1: STABILITY INDEX ---
+    # Create a 3-row layout: [Main Gauge, Trend Line, Live Ticker]
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10), 
+                                       gridspec_kw={'height_ratios': [2, 3, 2]})
+    
+    # --- PANEL 1: STABILITY GAUGE ---
     color = 'red' if score > 70 else 'orange' if score > 40 else 'green'
-    ax1.barh(['Stability Index'], [score], color=color, alpha=0.6)
+    ax1.barh(['INDEX'], [score], color=color, alpha=0.7)
     ax1.set_xlim(0, 150)
-    ax1.set_title(f"SOFIE SYSTEMIC MONITOR | {datetime.now().strftime('%H:%M')} GMT", color='cyan')
-    ax1.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
-    ax1.grid(axis='x', linestyle='--', alpha=0.2)
+    ax1.set_title(f"SOFIE EVOLVED v2.0 | {datetime.now().strftime('%H:%M:%S')} GMT", color='cyan', loc='left')
+    ax1.text(5, 0, f"BREACH PROBABILITY: {prob}%", color='white', fontweight='bold', va='center')
+    ax1.axis('off')
 
-    # --- LIVE FEED TICKER ---
-    ax2.axis('off')  # Hide axes for the ticker area
-    feed_text = (
-        f">>> [SYSTEM STATUS: {status}]\n"
-        f">>> [MARCH 22 EVENT DETECTED: Severity {score/10:.1f}]\n"
-        f">>> [CAUSAL CHAIN: Digital -> Financial -> Infrastructure]\n"
-        f">>> [TIME TO ULTIMATUM: 34 HOURS]"
+    # --- PANEL 2: SYSTEMIC TREND (The 'Graph') ---
+    # We'll pull the last 10 scores from your history to show the trend
+    try:
+        history_path = os.path.join(EXPORT_DIR, "stability_history.csv")
+        df_hist = pd.read_csv(history_path).tail(15)
+        ax2.plot(range(len(df_hist)), df_hist['Score'], color='cyan', marker='o', linewidth=2)
+        ax2.fill_between(range(len(df_hist)), df_hist['Score'], color='cyan', alpha=0.1)
+        ax2.set_ylabel("Stability Index")
+        ax2.set_title("TEMPORAL STABILITY TREND (LAST 15 RUNS)", fontsize=10, color='gray')
+    except:
+        ax2.text(0.5, 0.5, "INITIALIZING TREND DATA...", ha='center', color='gray')
+    
+    ax2.grid(color='white', alpha=0.1)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+
+    # --- PANEL 3: LIVE FEED TICKER ---
+    ax3.set_facecolor('#0a0a0a')
+    ax3.set_xticks([])
+    ax3.set_yticks([])
+    ticker_content = (
+        f">>> STATUS: {status}\n"
+        f">>> EVENT DETECTED: BLACK SWAN SEVERITY {score/10:.1f}\n"
+        f">>> NODE STATUS: DIGITAL HUB [CRITICAL] | POWER GRID [WARNING]\n"
+        f">>> CAUSAL ANALYSIS: STOCHASTIC SHOCK DETECTED"
     )
-    ax2.text(0.01, 0.5, feed_text, color='lime', fontfamily='monospace', fontsize=10, va='center')
+    ax3.text(0.02, 0.5, ticker_content, color='lime', fontfamily='monospace', fontsize=9, va='center')
+    ax3.set_title("LIVE INTELLIGENCE FEED", loc='left', fontsize=8, color='lime')
 
     plt.tight_layout()
     report_path = os.path.join(EXPORT_DIR, "stability_report_march_22.png")
