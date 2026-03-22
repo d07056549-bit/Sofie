@@ -18,6 +18,12 @@ class SofieVisualizer:
         fig.suptitle(f"SOFIE INTELLIGENCE DASHBOARD | GLOBAL FRAGILITY: {score}", 
                      fontsize=22, fontweight='bold', y=0.98)
 
+        # If the score is over 100, we color the dashboard 'Neon Purple' (The Black Swan Color)
+        bg_color = '#0f172a' # Default Navy
+        if score > 100:
+        bg_color = '#1e1b4b' # Deep Cosmic Purple
+        print("OVERLOAD: Stability Index has exceeded human-readable limits.")
+
         # --- PANEL 1: STABILITY GAUGE (Top Left) ---
         ax1 = fig.add_subplot(gs[0, 0])
         color = '#d63031' if score > 70 else '#fdcb6e'
