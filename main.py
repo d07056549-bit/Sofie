@@ -1,106 +1,106 @@
-import argparse
 import os
-import pandas as pd
+import sys
+import argparse
 from datetime import datetime
 
-# Internal Sofie Modules
-from src.data_pipeline.loaders import DataLoader
-from src.core.risk_engine import SofieRiskEngine
-from src.core.scenario_engine import ScenarioEngine
+# Import our custom modules
 from src.utils.visualizer import SofieVisualizer
-from src.utils.briefing import SofieBriefing
-from src.utils.alerts import SofieAlerts
 from src.utils.mapper import SofieMapper
+from src.utils.data_processor import SofieDataEngine
 
-def record_history(score, scenario):
-    """Saves the results of every run to a CSV for trend tracking."""
-    history_file = "exports/stability_history.csv"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+def record_history(score, scenario_name, output_path="exports/"):
+    """Logs the simulation result to a CSV for the trendline component."""
+    history_file = os.path.join(output_path, "stability_history.csv")
+    file_exists = os.path.isfile(history_file)
     
-    # Create the directory if it's missing
-    if not os.path.exists("exports"):
-        os.makedirs("exports")
-        
-    new_entry = pd.DataFrame([[timestamp, scenario, score]], 
-                            columns=['Timestamp', 'Scenario', 'Score'])
-    
-    if not os.path.exists(history_file):
-        new_entry.to_csv(history_file, index=False)
-    else:
-        new_entry.to_csv(history_file, mode='a', header=False, index=False)
-    print(f"-> History Logged: {timestamp} | {scenario} | Score: {score}")
+    with open(history_file, "a") as f:
+        if not file_exists:
+            f.write("Timestamp,Scenario,Score\n")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        f.write(f"{timestamp},{scenario_name},{score}\n")
 
 def main():
-    # 1. Handle Command Line Scenarios
-    parser = argparse.ArgumentParser(description="Sofie Evolved v2.0 | Intelligence OS")
-    parser.add_argument("--scenario", type=str, help="Options: peace, ultimatum_expires, blackout")
+    # 1. Setup CLI Arguments
+    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 - Global Fragility Monitor")
+    parser.add_argument('--scenario', type=str, default='baseline', 
+                        choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'],
+                        help='Choose the simulation scenario')
     args = parser.parse_args()
 
-    print("\n" + "="*50)
-    print("--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"DATE: {datetime.now().strftime('%B %d, %Y')}")
+    print("="*50)
+    print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
+    print(f"DATE: March 22, 2026")
     print("="*50 + "\n")
-    
-    # 2. Load Real-World Baseline Data (March 22, 2026)
-    # Note: Ensure your DataLoader points to your actual data files
-    data = DataLoader(feed_date="2026-03-22").get_latest_nexus()
-    
-    # 3. Apply Scenario Overrides (If any)
-    current_scenario = "Baseline"
-    if args.scenario:
-        current_scenario = args.scenario
-        data = ScenarioEngine().apply(data, args.scenario)
-    
-    # 4. Run Global Risk Calculations
-    engine = SofieRiskEngine(data)
-    stability_score = engine.calculate_global_fragility()
-    print(f"\n>>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
-    at_risk_list = ["Argentina", "Belarus", "Belize", "Bolivia", "Cameroon"] # Pull from your alerts
-    SofieMapper().generate_risk_map(at_risk_list)
 
-    # 5. Generate Multi-Panel Visual Dashboard
-    viz = SofieVisualizer()
-    viz.generate_risk_chart(stability_score, data)
+    # 2. Initialize Data Engines
+    # This reads your C:/Data/raw/ folder automatically
+    data_engine = SofieDataEngine(root_dir="Data/raw")
+    live_csv_stats = data_engine.run_all() 
     
-    # 6. Generate Text SITREP (Situation Report)
-    brief = SofieBriefing()
-    brief.generate_brief(stability_score, data)
+    # 3. Define Simulation Scenarios
+    # We combine manual inputs with data-driven multipliers from your CSVs
+    scenarios = {
+        'baseline': {
+            'oil_price': 112.19, 
+            'port_friction': live_csv_stats['friction'], # From Maritime CSV
+            'sovereign_risk_entities': 96 + (live_csv_stats['fatalities'] // 500) # Risk scaled by ACLED deaths
+        },
+        'peace': {
+            'oil_price': 72.50,
+            'port_friction': 1.0,
+            'sovereign_risk_entities': 45
+        },
+        'blackout': {
+            'oil_price': 185.00,
+            'port_friction': 5.0,
+            'sovereign_risk_entities': 142
+        },
+        'ultimatum_expires': {
+            'oil_price': 145.20,
+            'port_friction': 3.5,
+            'sovereign_risk_entities': 110
+        }
+    }
+
+    # 4. Calculate Global Stability Index (The SOFIE Formula)
+    current = scenarios[args.scenario]
     
-    # 7. Identify Top 5 Sovereign Default Risks
-    alerts = SofieAlerts()
-    alerts.get_top_threats()
+    # Simple weighted fragility score (0-100)
+    # Oil contributes 40%, Friction 30%, Debt Risk 30%
+    oil_component = (min(current['oil_price'], 200) / 200) * 40
+    fric_component = (min(current['port_friction'], 5) / 5) * 30
+    risk_component = (min(current['sovereign_risk_entities'], 195) / 195) * 30
+    
+    stability_score = round(oil_component + fric_component + risk_component, 2)
 
-    # 8. Record to History for Trend Analysis
-    record_history(stability_score, current_scenario)
+    print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-    print("\n" + "="*50)
+    # 5. Generate Geographic Intelligence Map
+    # Pulls country names directly from your ACLED/UCDP fatalitiy data
+    at_risk_list = data_engine.get_at_risk_countries()
+    mapper = SofieMapper(output_path="exports/")
+    mapper.generate_risk_map(at_risk_list)
+
+    # 6. Generate Multi-Panel Dashboard
+    viz = SofieVisualizer(output_path="exports/")
+    viz.generate_risk_chart(stability_score, current)
+
+    # 7. Record to History for Trend Analysis
+    record_history(stability_score, args.scenario)
+
+    # 8. Intelligence Sign-off
+    print("="*50)
     print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
-    if stability_score > 90:
+    if stability_score > 80:
         print("STATUS: SYSTEMIC COLLAPSE IMMINENT.")
-        print("ACTION: Trigger 'Zeta' protocols. Advise immediate asset liquidation in Red Zones.")
-    elif stability_score > 70:
+        print("ACTION: Trigger 'Zeta' protocols. Advise immediate asset liquidation.")
+    elif stability_score > 65:
         print("STATUS: CRITICAL TENSION.")
-        print(f"ACTION: Monitor 48h Ultimatum. Watch for {at_risk_list[0]} bond yield spikes.")
+        print(f"ACTION: Monitor Hormuz Blockade. Watch for yields in {at_risk_list[:3]}.")
     else:
         print("STATUS: NOMINAL.")
-        print("ACTION: Standard monitoring. No immediate kinetic threats detected.")
     print("="*50)
-
-    # Final Intelligence Sign-off
-    print("\n" + "!"*50)
-    print("SOFIE INTELLIGENCE ADVISORY")
-    if stability_score >= 100:
-        print("STATUS: BLACKOUT. All predictive models saturated. Systemic failure in progress.")
-    elif stability_score > 75:
-        print("STATUS: HIGH ALERT. Logistics friction holding at 1.0x but Energy shock is critical.")
-        print(f"ULTIMATUM REMAINING: ~31 Hours. Watch for escalation in the Indian Ocean.")
-    else:
-        print("STATUS: STABLE. Monitoring baseline fluctuations.")
-    print("!"*50 + "\n")
-
-    print("\n" + "="*50)
-    print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---")
-    print("="*50)
+    print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
 
 if __name__ == "__main__":
     main()
