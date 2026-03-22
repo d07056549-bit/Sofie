@@ -2,35 +2,43 @@ import pandas as pd
 import os
 
 class DataLoader:
-    def __init__(self, feed_date):
+    def __init__(self, feed_date="2026-03-22"):
         self.date = feed_date
-        self.raw_path = "data/raw"
+        # Base path is our local data folder
+        self.base_path = "data/raw"
 
     def get_latest_nexus(self):
-        """Actually reads your 2026 CSV files from data/raw."""
+        """Finds and reads your Sovereign Risk and Trade files."""
         
-        # 1. Look for your Sovereign Credit file
-        sov_file = os.path.join(self.raw_path, "Sovereign_Credit_Ratings.csv")
-        
-        # 2. Look for your March 21 ComTrade file
-        # (Using the name from your earlier folder list)
-        trade_file = os.path.join(self.raw_path, "TradeData_3_21_2026_13_19_10.csv")
+        # 1. Define the path to the Sovereign Risk folder
+        # Note: 'Sovereign Risk' has a space in it, so we use os.path.join
+        sov_folder = os.path.join(self.base_path, "Sovereign Risk")
+        sov_file_path = os.path.join(sov_folder, "Sovereign_Credit_Ratings.csv")
 
-        # --- INTERNAL LOGIC ---
-        # If files exist, we'll extract data. If not, we use 'Safe Estimates'
-        oil_price = 112.19  # We will eventually automate this too
-        gpr_index = 385.0
-        
-        # Let's count how many "At Risk" countries are in your Sovereign file
-        risk_count = 0
-        if os.path.exists(sov_file):
-            df_sov = pd.read_csv(sov_file)
-            # Count countries with 'B' or 'C' ratings (High Default Risk)
-            risk_count = len(df_sov[df_sov['Rating'].str.contains('B|C', na=False)])
+        # --- DATA EXTRACTION ---
+        oil_price = 112.19  # Current March 22 Market Price
+        gpr_index = 385.0   # Current Geopolitical Risk Level
+        risk_entities = 0
+
+        # 2. Check if the file actually exists before reading
+        if os.path.exists(sov_file_path):
+            try:
+                # We use low_memory=False for larger datasets
+                df_sov = pd.read_csv(sov_file_path)
+                
+                # Count how many countries have 'B' or 'C' ratings (High Default Risk)
+                # This assumes your CSV has a column named 'Rating' or 'S&P Rating'
+                # We'll use a flexible search for 'B' or 'C' in the strings
+                risk_entities = len(df_sov[df_sov.iloc[:, 1].astype(str).str.contains('B|C', na=False)])
+                print(f"-> Verified: Found {risk_entities} high-risk sovereign entities.")
+            except Exception as e:
+                print(f"-> Error reading Sovereign file: {e}")
+        else:
+            print(f"-> Warning: Could not find file at {sov_file_path}")
 
         return {
             "oil_price": oil_price,
             "gpr_index": gpr_index,
-            "sovereign_risk_entities": risk_count,
+            "sovereign_risk_entities": risk_entities,
             "shipping_delay": 0.45 
         }
