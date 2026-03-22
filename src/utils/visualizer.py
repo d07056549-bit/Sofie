@@ -48,8 +48,13 @@ class SofieVisualizer:
         # --- PANEL 4: SOVEREIGN RISK DISTRIBUTION (Middle Right) ---
         ax4 = fig.add_subplot(gs[1, 1])
         risk_count = data.get('sovereign_risk_entities', 96)
-        # Assuming 195 total nations
+        
+        # Fixed and closed the pie chart function
         ax4.pie([risk_count, 195-risk_count], 
                 labels=['At Risk', 'Stable'], 
                 colors=['#ff7675', '#b2bec3'], 
-                autopct='%1.1f%%', start
+                autopct='%1.1f%%', 
+                startangle=140, 
+                explode=(0.05, 0)) 
+        
+        ax4.set_title(f"Sovereign Debt Risk ({risk_count} Entities)", fontsize=14, fontweight='bold')
