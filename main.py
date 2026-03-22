@@ -43,6 +43,16 @@ def main():
             if any(word in news for word in ["blockade", "strike", "ultimatum"]):
                 news_multiplier = 1.4
 
+    # 3.5 Market Opening Escalation
+    # If it's Sunday night (March 22) after 22:00 GMT, add "Opening Panic"
+    current_hour = datetime.now().hour
+    market_panic = 0
+    if current_hour >= 22:
+        print("!! WARNING: Asian Market Opening approaching. Adding +5.0 volatility.")
+        market_panic = 5.0
+    
+    stability_score = round(oil_comp + fric_comp + risk_comp + market_panic, 2)
+
     # 4. Scenario Definitions
     scenarios = {
         'baseline': {
