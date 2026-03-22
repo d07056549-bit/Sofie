@@ -1,5 +1,7 @@
-os.environ["PYTENSOR_FLAGS"] = "cxx="
 import os
+# --- LINE 1 & 2: SILENCE WARNINGS ---
+os.environ["PYTENSOR_FLAGS"] = "cxx="
+
 import argparse
 import pandas as pd
 import numpy as np
@@ -15,47 +17,37 @@ except ImportError:
 # Layer 1: Sensing (Robust Data Engine)
 from src.utils.data_processor import SofieDataEngine
 
-def calculate_nexus_score(live_stats):
-    """Layer 2: Math - Cauchy Stochastic Shock"""
+def calculate_nexus_score(live_stats, hours_to_deadline=34):
+    """
+    Layer 2: Math. 
+    Calculates a stochastic stability score with Temporal Stress and Cauchy Shocks.
+    """
+    # 1. Base Components from Sensors
     fatalities_comp = live_stats.get('fatalities', 0) / 20
     friction_comp = live_stats.get('friction', 1.0) * 10
     volatility_comp = live_stats.get('volatility', 1.0) * 15
     
+    # 2. Temporal Stress (The 'Ultimatum' Factor)
+    # Risk increases exponentially as hours_to_deadline approaches 0
+    time_stress = 50 / (hours_to_deadline + 1)
+    
+    # 3. Black Swan Logic & Multiplier
     is_swan = live_stats.get('black_swan_active', False)
     swan_sev = live_stats.get('swan_severity', 0.0)
     
+    # Systemic multiplier if a Black Swan event is detected
     multiplier = 1.0 + (swan_sev * 0.07) if is_swan else 1.0
-    base_score = (fatalities_comp + friction_comp + volatility_comp) * multiplier
     
+    base_score = (fatalities_comp + friction_comp + volatility_comp + time_stress) * multiplier
+    
+    # 4. Stochastic Cauchy Shock (The 'Fat-Tail' jump)
     gamma = swan_sev if is_swan else 0.5
     shock = abs(np.random.standard_cauchy()) * gamma
     
     return round(np.clip(base_score + shock, 0, 150), 2)
 
-def generate_dashboard(score, prob, status):
-    """Creates the Visual Intelligence Report (PNG)"""
-    plt.style.use('dark_background')
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # Simple gauge-style bar
-    color = 'red' if score > 70 else 'orange' if score > 40 else 'green'
-    ax.barh(['Stability Index'], [score], color=color, alpha=0.6)
-    ax.set_xlim(0, 150)
-    
-    plt.title(f"SOFIE SITREP: {status} | {datetime.now().strftime('%H:%M')} GMT", fontsize=14, color='cyan')
-    plt.xlabel("Index Value (0-150)")
-    plt.grid(axis='x', linestyle='--', alpha=0.3)
-    
-    # Text Overlay
-    plt.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
-    plt.text(5, -0.2, f"Systemic Status: {status}", fontsize=12, color=color, fontweight='bold')
-
-    plt.tight_layout()
-    plt.savefig("stability_report_march_22.png")
-    plt.close()
-
 def run_bayesian_probability(current_score, swan_active):
-    """Layer 3: Bayesian Inference"""
+    """Layer 3: Bayesian Logic - Calculates Breach Probability"""
     if not pm or current_score < 40:
         return 5.2 
     try:
@@ -67,9 +59,30 @@ def run_bayesian_probability(current_score, swan_active):
     except:
         return 5.2
 
+def generate_dashboard(score, prob, status):
+    """Creates the Visual Intelligence Report (PNG)"""
+    plt.style.use('dark_background')
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    color = 'red' if score > 70 else 'orange' if score > 40 else 'green'
+    ax.barh(['Stability Index'], [score], color=color, alpha=0.6)
+    ax.set_xlim(0, 150)
+    
+    plt.title(f"SOFIE SITREP: {status} | {datetime.now().strftime('%H:%M')} GMT", fontsize=14, color='cyan')
+    plt.xlabel("Index Value (0-150)")
+    plt.grid(axis='x', linestyle='--', alpha=0.3)
+    
+    plt.text(5, 0.2, f"Probability of Breach: {prob}%", fontsize=12, color='white', fontweight='bold')
+    plt.text(5, -0.2, f"Systemic Status: {status}", fontsize=12, color=color, fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig("stability_report_march_22.png")
+    plt.close()
+
 def main():
     parser = argparse.ArgumentParser(description="SOFIE EVOLVED v2.0")
     parser.add_argument("--scenario", type=str, default="baseline")
+    parser.add_argument("--hours", type=int, default=34, help="Hours until ultimatum expires")
     args = parser.parse_args()
 
     engine = SofieDataEngine()
@@ -80,31 +93,40 @@ def main():
     print("=======================================================")
 
     try:
+        # Step 1: Data Sensing
         live_stats = engine.run_all()
-        stability_score = calculate_nexus_score(live_stats)
+        
+        # Step 2: Stochastic Math (Now with Temporal Stress)
+        stability_score = calculate_nexus_score(live_stats, hours_to_deadline=args.hours)
+        
+        # Step 3: Bayesian Logic
         prob_breach = run_bayesian_probability(stability_score, live_stats.get('black_swan_active', False))
+        
+        # Step 4: Status Determination
         status = "CRITICAL" if stability_score > 90 else "UNSTABLE" if stability_score > 70 else "STABLE"
         
-        # Log to CSV
+        # Persist results to CSV
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         pd.DataFrame([[timestamp, args.scenario, stability_score]]).to_csv(
             "stability_history.csv", mode='a', header=False, index=False
         )
 
-        # GENERATE VISUAL DASHBOARD
+        # Step 5: Generate Visual Dashboard
         generate_dashboard(stability_score, prob_breach, status)
 
+        # Console Output
         print("-------------------------------------------------------")
         print(f"STABILITY INDEX: {stability_score}")
         print(f"PROBABILITY OF SYSTEMIC BREACH: {prob_breach}%")
         print(f"STATUS: {status}")
+        print(f"COUNTDOWN: {args.hours} hours remaining")
         print(f"✅ DASHBOARD GENERATED: stability_report_march_22.png")
         
         if live_stats.get('black_swan_active'):
-            print(f"!!! BLACK SWAN ALERT: Severity {round(live_stats['swan_severity'], 2)} !!!")
+            print(f"!!! BLACK SWAN ALERT: Severity {round(live_stats['swan_severity'], 2)} Detected !!!")
             
         print("=======================================================")
-        print("ULTIMATUM EXPIRES IN <34 HOURS.")
+        print(f"--- SITREP SUMMARY: {datetime.now().strftime('%B %d, %Y').upper()} ---")
 
     except Exception as e:
         print(f"CRITICAL SYSTEM ERROR: {e}")
