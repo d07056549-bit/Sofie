@@ -10,6 +10,7 @@ from src.core.scenario_engine import ScenarioEngine
 from src.utils.visualizer import SofieVisualizer
 from src.utils.briefing import SofieBriefing
 from src.utils.alerts import SofieAlerts
+from src.utils.mapper import SofieMapper
 
 def record_history(score, scenario):
     """Saves the results of every run to a CSV for trend tracking."""
@@ -54,6 +55,8 @@ def main():
     engine = SofieRiskEngine(data)
     stability_score = engine.calculate_global_fragility()
     print(f"\n>>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
+    at_risk_list = ["Argentina", "Belarus", "Belize", "Bolivia", "Cameroon"] # Pull from your alerts
+    SofieMapper().generate_risk_map(at_risk_list)
 
     # 5. Generate Multi-Panel Visual Dashboard
     viz = SofieVisualizer()
