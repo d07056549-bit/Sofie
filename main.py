@@ -25,10 +25,18 @@ def main():
     stability_score = engine.calculate_global_fragility()
     print(f"Global Stability Index: {stability_score}")
 
-    # 4. Export
-    SofieVisualizer().generate_risk_chart(stability_score)
-    SofieBriefing().generate_brief(stability_score, data)
-    SofieAlerts().get_top_threats()
+ # 4. Export (UPDATED)
+    # Pass 'data' into the visualizer so it can draw the subplots
+    viz = SofieVisualizer()
+    viz.generate_risk_chart(stability_score, data) 
+    
+    # Generate the text report
+    brief = SofieBriefing()
+    brief.generate_brief(stability_score, data)
+    
+    # Print the country alerts to the console
+    alerts = SofieAlerts()
+    alerts.get_top_threats()
 
 if __name__ == "__main__":
     main()
