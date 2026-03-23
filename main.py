@@ -97,20 +97,18 @@ def main():
 
         # --- ENHANCED ISO & NAME MAPPING ---
         iso_fix = {
-            # Format: 'DATA_NAME': 'MAP_NAME'
-            'VNM': 'Vietnam',
+            # Data Name : Map Name
+            'COD': 'Dem. Rep. Congo',
+            'CAF': 'Central African Rep.',
             'SSD': 'S. Sudan',
-            'CZE': 'Czechia',
-            'ESH': 'W. Sahara',
+            'CIV': "Côte d'Ivoire",
+            'BIH': 'Bosnia and Herz.',
             'GNQ': 'Eq. Guinea',
-            'BHS': 'Bahamas',
             'VUT': 'Vanuatu',
             'BRN': 'Brunei',
-            'BTN': 'Bhutan',
-            'USA': 'United States of America',
-            'COD': 'Dem. Rep. Congo',
-            'TUR': 'Turkey',
-            'PHL': 'Philippines'
+            'PSE': 'Palestine',
+            'FLK': 'Falkland Is.',
+            'SOL': 'Somaliland'
         }
 
         # Apply the fix to your tension map
