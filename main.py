@@ -64,28 +64,40 @@ def main():
     live_stats = data_engine.run_all()
     
     # 3. GEOPOLITICAL CONSENSUS (Nexus: History + Live)
+    # --- Initialize Defaults to prevent UnboundLocalError ---
+    world_tension = 2.18 # Your last known stable baseline
+    tension_map_data = {} 
+    
+    # Try fetching Live Feed
     live_tension = fetch_live_world_tension()
     
     try:
         # Load CSV History (The "Memory")
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
-        hist_score = acled_df[acled_df['YEAR'] == 2026]['CONFLICT_INDEX'].nlargest(10).mean()
+        acled_df.columns = [c.upper() for c in acled_df.columns]
+        
+        # 1. Calculate Historical Tension (Top 10 Hotspots)
+        latest_year = acled_df['YEAR'].max()
+        hist_latest = acled_df[acled_df['YEAR'] == latest_year]
+        hist_score = hist_latest['CONFLICT_INDEX'].nlargest(10).mean()
 
-        # BLEND LOGIC: 60% History (CSV) + 40% Live Feed (GDELT)
-        if live_tension:
+        # 2. Blend Logic: 60% History / 40% Live
+        if live_tension is not None:
             world_tension = (hist_score * 0.6) + (live_tension * 0.4)
             print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Nexus Blend: {live_tension}% Live / {hist_score:.1f}% Hist)")
         else:
             world_tension = hist_score
             print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Historical Mode Only)")
 
+        # 3. Prep Map Data (Always use CSV for the geography)
+        tension_map_data = hist_latest.set_index('COUNTRY')['CONFLICT_INDEX'].to_dict()
         global_conflict_avg = world_tension
-        # Generate the dict for the map
-        tension_map_data = acled_df[acled_df['YEAR'] == 2026].set_index('COUNTRY')['CONFLICT_INDEX'].to_dict()
         
     except Exception as e:
         print(f"⚠️ Geopolitical Engine Error: {e}")
-        global_conflict_avg = 23.79
+        # Final safety fallback
+        global_conflict_avg = 23.79 
+        tension_map_data = {}
 
     # 4. SCENARIO LOGIC
     scenarios = {
