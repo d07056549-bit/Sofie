@@ -93,6 +93,27 @@ def main():
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
         
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
+
+        # --- NEW: FLASHPOINT DETECTOR (ANOMALY ALERTS) ---
+        current_risks['DELTA'] = 0.0
+        
+        for idx, row in current_risks.iterrows():
+            country = str(row[c_col])
+            current = row['CONFLICT_INDEX']
+            hist_avg = baseline_map.get(country, 0.0)
+            hist_tension = ((hist_avg - 10) / -20) * 100
+            
+            # Calculate how much today deviates from history
+            current_risks.at[idx, 'DELTA'] = current - hist_tension
+
+        # Sort by the biggest positive deviation (Current > History)
+        flashpoints = current_risks.sort_values(by='DELTA', ascending=False).head(3)
+
+        print("\n🚨 STRATEGIC ANOMALY ALERTS (Deviation from 90M-Row Baseline):")
+        for _, alert in flashpoints.iterrows():
+            status = "🔴 CRITICAL" if alert['DELTA'] > 30 else "🟡 ELEVATED"
+            print(f"   {status} | {alert[c_col]}: +{alert['DELTA']:.1f}% above historical norm")
+        print("")
         
         def calculate_anomaly(row):
             country_name = str(row[c_col])
