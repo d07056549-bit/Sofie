@@ -1,41 +1,53 @@
-import matplotlib.pyplot as plt
 import os
+import matplotlib.pyplot as plt
+import geopandas as gpd
 
 class SofieVisualizer:
     def __init__(self, output_path="exports/"):
         self.output_path = output_path
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        os.makedirs(output_path, exist_ok=True)
+        self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
 
-    def generate_risk_chart(self, score, current_data):
-        # --- BLACK SWAN VISUAL LOGIC ---
-        # If the score is over 100, we shift to 'Overload' colors
-        if score > 100:
-            bg_color = '#1e1b4b' # Deep Cosmic Purple
-            accent_color = '#f472b6' # Neon Pink
-            title_prefix = "!!! BLACK SWAN OVERLOAD !!!"
-        else:
-            bg_color = '#0f172a' # Standard Deep Navy
-            accent_color = '#ef4444' # Standard Red
-            title_prefix = "GLOBAL FRAGILITY MONITOR"
-
-        # Initialize the Plot
-        fig, ax = plt.subplots(figsize=(10, 6), facecolor=bg_color)
-        ax.set_facecolor(bg_color)
-
-        # Basic Gauge Logic (Simplified for brevity)
-        plt.title(f"{title_prefix}\nMARCH 22, 2026", color='white', fontsize=14, fontweight='bold')
+    def generate_unified_intel(self, score, at_risk, friction, suffix=""):
+        # 1. Setup the Master Canvas (Dark Mode)
+        fig = plt.figure(figsize=(20, 12), facecolor='#050505')
+        gs = fig.add_gridspec(2, 2, height_ratios=[1.2, 1])
         
-        # Add the score text in the center
-        plt.text(0.5, 0.5, f"{score}", transform=ax.transAxes, 
-                 fontsize=60, color=accent_color, ha='center', fontweight='bold')
-        
-        plt.text(0.5, 0.3, "STABILITY INDEX", transform=ax.transAxes, 
-                 fontsize=12, color='white', ha='center')
+        # --- PANEL A: GEOPOLITICAL RISK MAP (Top Span) ---
+        ax1 = fig.add_subplot(gs[0, :])
+        world = gpd.read_file(self.world_url)
+        world.plot(ax=ax1, color='#1a1a1a', edgecolor='#333333')
+        world[world['NAME'].isin(at_risk)].plot(ax=ax1, color='#ff0033', alpha=0.7)
+        ax1.set_title(f"TOP-LEVEL GEOPOLITICAL RISK | NEXUS {suffix}", color='cyan', fontsize=16, pad=20)
+        ax1.set_axis_off()
 
-        # Cleanup and Save
-        ax.axis('off')
-        report_file = os.path.join(self.output_path, "stability_report_march_22.png")
-        plt.savefig(report_file, dpi=150, facecolor=bg_color)
+        # --- PANEL B: LOGISTICS FRICTION HEATMAP (Bottom Left) ---
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax2.set_facecolor('#0a0a0a')
+        for port, data in friction.items():
+            color = '#ff0033' if data.get('friction', 0) > 3.0 else '#00ff66'
+            ax2.scatter(data.get('lon', 0), data.get('lat', 0), s=150, c=color, edgecolors='white', zorder=3)
+            ax2.text(data.get('lon', 0)+2, data.get('lat', 0), port.upper(), color='white', fontsize=7)
+        ax2.set_title("MARITIME FRICTION NODES", color='white', fontsize=12)
+        ax2.grid(color='white', alpha=0.05)
+
+        # --- PANEL C: STABILITY INDEX GAUGE (Bottom Right) ---
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax3.set_facecolor('#0a0a0a')
+        color_gauge = '#00ff66' if score < 40 else '#ffcc00' if score < 70 else '#ff0033'
+        
+        # Simple Bar Gauge
+        ax3.barh(["STABILITY"], [100], color='#222', height=0.4)
+        ax3.barh(["STABILITY"], [score], color=color_gauge, height=0.4)
+        ax3.text(score + 2, 0, f"{score}%", color=color_gauge, fontsize=24, fontweight='bold', va='center')
+        ax3.set_xlim(0, 110)
+        ax3.set_title("GLOBAL FRAGILITY INDEX", color='white', fontsize=12)
+        ax3.get_yaxis().set_visible(False)
+
+        # 2. Final Export
+        plt.tight_layout(pad=5.0)
+        filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
+        save_path = os.path.join(self.output_path, filename)
+        plt.savefig(save_path, facecolor='#050505', dpi=150)
         plt.close()
-        print(f"-> Multi-Panel Intelligence Dashboard Exported: {report_file}")
+        print(f"-> UNIFIED COMMAND SITREP EXPORTED: {filename}")
