@@ -54,26 +54,21 @@ def main():
     live_stats = data_engine.run_all()
     
     # 3. Crisis Intelligence Multiplier
-    news_multiplier = 1.0
-    if os.path.exists("news_feed.txt"):
-        with open("news_feed.txt", "r") as f:
-            news = f.read().lower()
-            if any(word in news for word in ["blockade", "strike", "ultimatum"]):
-                news_multiplier = 1.4
-
-    # FIX: Using live_stats to create a baseline
+    # (Removed news_feed.txt dependency)
+    news_multiplier = 1.0 
+    
+    # We still calculate the base stability from the CSV data
     base_stability = round(live_stats.get('friction', 1.0) * 35.0, 2)
     
-    # Check the CLI --scenario flag
+    # Apply scenario logic
     if args.scenario in ["blackout", "ultimatum_expires"]:
-        stability_score = round(base_stability * 1.5 * news_multiplier, 2)
-        status_msg = f"CRITICAL: {args.scenario.upper()} in effect." # Added this
-        print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED - Risk adjusted.")
+        stability_score = round(base_stability * 1.5, 2)
+        status_msg = f"CRITICAL: {args.scenario.upper()} in effect."
+        print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED.")
     else:
-        stability_score = round(base_stability * news_multiplier, 2)
+        stability_score = base_stability
         status_msg = "STABLE. Monitoring regional friction nodes."
 
-    # Make sure we don't exceed 100%
     stability_score = min(stability_score, 100.0)
 
     # 4. Scenario Definitions
