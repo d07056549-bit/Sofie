@@ -94,7 +94,7 @@ def main():
     visualizer.generate_unified_intel(
         score=stability_score, 
         at_risk=at_risk_list, 
-        friction=friction_data, 
+        friction=live_stats['port_map'], 
         alerts=live_alerts, 
         suffix=file_suffix
     )
