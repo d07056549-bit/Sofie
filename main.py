@@ -137,6 +137,13 @@ def main():
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
+        
+        # --- FIX: Ensure ISO exists for the Visualizer ---
+        # We create a reverse map from our iso_fix dictionary to fill in missing ISOs
+        name_to_iso = {v: k for k, v in iso_fix.items()}
+        if 'ISO' not in acled_df.columns:
+            acled_df['ISO'] = acled_df[c_col].map(name_to_iso).fillna('GLOBAL')
+
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
         def calculate_nexus(row):
