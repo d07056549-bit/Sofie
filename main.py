@@ -8,15 +8,29 @@ from src.utils.mapper import SofieMapper
 from src.utils.logistics_mapper import LogisticsMapper
 from src.utils.data_processor import SofieDataEngine
 
-def record_history(score, scenario_name, output_path="exports/"):
+def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
     """Logs simulation results for the historical trend panel."""
+    import os
+    from datetime import datetime
+    
+    # 1. Ensure the folder exists
+    os.makedirs(output_path, exist_ok=True)
+    
+    # 2. Set the correct file path
     history_file = os.path.join(output_path, "stability_history.csv")
     file_exists = os.path.isfile(history_file)
+    
+    # 3. Open the file in 'append' mode ('a')
     with open(history_file, "a") as f:
+        # If it's a brand new file, add the headers first
         if not file_exists:
             f.write("Timestamp,Scenario,Score\n")
+        
+        # Write the actual data row
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         f.write(f"{timestamp},{scenario_name},{score}\n")
+    
+    print(f"📊 HISTORICAL LOG UPDATED: {history_file}")
 
 def main():
     # 1. Setup CLI (Defining 'args' first to prevent NameError)
