@@ -41,6 +41,23 @@ def fetch_live_world_tension():
         print(f"⚠️ GDELT Client Error: {e}. Reverting to Historical CSV.")
         return None
 
+# Load the big master file (using chunksize if it's too big for RAM)
+master_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Events\Gdelt\GDELT.MASTERREDUCEDV2.txt"
+
+print("⏳ Distilling Master GDELT File...")
+# GDELT Master files are usually Tab-Separated
+df = pd.read_csv(master_path, sep='\t', usecols=['Year', 'ActionGeo_CountryCode', 'GoldsteinScale'])
+
+# Filter for recent 'Context' (last 2 years)
+recent_context = df[df['Year'] >= 2024]
+
+# Group by country to get their 'Historical Stability Average'
+# Goldstein Scale: -10 (Conflict) to +10 (Peace)
+stability_lookup = recent_context.groupby('ActionGeo_CountryCode')['GoldsteinScale'].mean()
+
+stability_lookup.to_csv("Data/processed/gdelt_historical_baseline.csv")
+print("✅ Created local stability baseline.")
+
 def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
     os.makedirs(output_path, exist_ok=True)
     history_file = os.path.join(output_path, "stability_history.csv")
