@@ -8,29 +8,33 @@ class SofieVisualizer:
         os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
         
-    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
+   def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
         import matplotlib.pyplot as plt
+        import os
         
-        # 1. Create the Figure (The Canvas) - THIS WAS MISSING
+       # 1. Create the Figure
         fig = plt.figure(figsize=(20, 12), facecolor='#FFFFFF')
         
-        # --- PANEL A: Global Stability Gauge ---
-        ax1 = fig.add_axes([0.05, 0.7, 0.25, 0.25])
-        # ... (gauge code) ...
+      # --- PANEL A: Global Stability Gauge (Top Left) ---
+        # [left, bottom, width, height]
+        ax1 = fig.add_axes([0.05, 0.7, 0.25, 0.25]) 
+        ax1.set_title("GLOBAL STABILITY INDEX", fontweight='bold', pad=15)
+        # ... (gauge code follows) ...
 
-        # --- PANEL B: Top Risk Entities ---
+       # --- PANEL B: Top Risk Entities (Middle Left) ---
         ax2 = fig.add_axes([0.05, 0.4, 0.25, 0.25])
-        # ... (risk list code) ...
+        ax2.set_title("TOP RISK ENTITIES", fontweight='bold')
+        # ... (risk list code follows) ...
 
-        # --- PANEL C: The Map ---
+      # --- PANEL C: The Map (Center/Right) ---
         ax3 = fig.add_axes([0.35, 0.1, 0.45, 0.85])
-        # ... (map code) ...
+        # ... (map code follows) ...
 
-        # --- PANEL D: LIVE PORT ALERTS (The Sidebar) ---
-        # Now 'fig' is defined, so this line will work!
+      # --- PANEL D: LIVE PORT ALERTS (The Sidebar) ---
         ax4 = fig.add_axes([0.82, 0.1, 0.15, 0.8]) 
         ax4.set_facecolor('#F8F9FA')
         ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold')
+        # ... (alert loop code follows) ...
         
         y_pos = 0.9
         for alert in alerts:
