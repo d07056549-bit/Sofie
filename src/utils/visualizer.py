@@ -9,11 +9,26 @@ class SofieVisualizer:
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
         
     def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
-        # ... setup canvas code from before ...
+        import matplotlib.pyplot as plt
         
-        # --- NEW PANEL D: LIVE PORT TRAFFIC FEED (Right Side overlay or new slot) ---
-        # Let's place it as a vertical sidebar or a footer
-        ax4 = fig.add_axes([0.82, 0.1, 0.15, 0.8]) # Custom position for sidebar
+        # 1. Create the Figure (The Canvas) - THIS WAS MISSING
+        fig = plt.figure(figsize=(20, 12), facecolor='#FFFFFF')
+        
+        # --- PANEL A: Global Stability Gauge ---
+        ax1 = fig.add_axes([0.05, 0.7, 0.25, 0.25])
+        # ... (gauge code) ...
+
+        # --- PANEL B: Top Risk Entities ---
+        ax2 = fig.add_axes([0.05, 0.4, 0.25, 0.25])
+        # ... (risk list code) ...
+
+        # --- PANEL C: The Map ---
+        ax3 = fig.add_axes([0.35, 0.1, 0.45, 0.85])
+        # ... (map code) ...
+
+        # --- PANEL D: LIVE PORT ALERTS (The Sidebar) ---
+        # Now 'fig' is defined, so this line will work!
+        ax4 = fig.add_axes([0.82, 0.1, 0.15, 0.8]) 
         ax4.set_facecolor('#F8F9FA')
         ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold')
         
@@ -70,8 +85,9 @@ class SofieVisualizer:
         ax3.tick_params(axis='x', colors='#495057')
 
         # 2. Final Export
-        plt.tight_layout(pad=6.0)
         filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
-        plt.savefig(os.path.join(self.output_path, filename), facecolor=bg_main, dpi=150)
+        save_path = os.path.join(self.output_path, filename)
+        plt.savefig(save_path, facecolor='#FFFFFF', dpi=150, bbox_inches='tight')
         plt.close()
+        
         print(f"-> LIGHT MODE SITREP EXPORTED: {filename}")
