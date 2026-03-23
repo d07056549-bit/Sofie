@@ -69,15 +69,15 @@ def main():
 
     print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-    # 6. Map Generation (Risk & Logistics)
+   # 6. Map Generation (Risk & Logistics)
+    # --- DEFINE THE SUFFIX HERE ---
+    file_suffix = now.strftime("%H%M") 
+    
     at_risk_list = data_engine.get_at_risk_countries()
-    SofieMapper().generate_risk_map(at_risk_list)
+    SofieMapper().generate_risk_map(at_risk_list, suffix=file_suffix)
     
     friction_data = data_engine.get_port_friction_map()
-    LogisticsMapper().generate_heatmap(friction_data)
-
-    friction_data = data_engine.get_port_friction_map()
-    # Pass the suffix to the Logistics Mapper
+    # Now file_suffix exists and can be passed here:
     LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
     # 7. Dashboard & Logging
