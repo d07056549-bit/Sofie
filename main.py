@@ -97,26 +97,27 @@ def main():
 
         # --- ENHANCED ISO & NAME MAPPING ---
         iso_fix = {
-            # Data Name : Map Name
-            'COD': 'Dem. Rep. Congo',
-            'CAF': 'Central African Rep.',
+            # Map-Name Sync for Missing Nodes
+            'VNM': 'Vietnam',
             'SSD': 'S. Sudan',
-            'CIV': "Côte d'Ivoire",
-            'BIH': 'Bosnia and Herz.',
+            'COG': 'Congo',
+            'LSO': 'Lesotho',
             'GNQ': 'Eq. Guinea',
             'VUT': 'Vanuatu',
             'BRN': 'Brunei',
-            'PSE': 'Palestine',
+            'CYP': 'N. Cyprus',
             'FLK': 'Falkland Is.',
-            'SOL': 'Somaliland',
-            'COG': 'Congo',
-            'LSO': 'Lesotho',
-            'TLS': 'Timor-Leste',
-            'ESH': 'W. Sahara',
+            'ATF': 'Fr. S. Antarctic Lands',
             'CZE': 'Czechia',
-            'BTN': 'Bhutan',
-            'VUT': 'Vanuatu',
-            'ATA': 'Antarctica.'
+            # Strategic Essentials
+            'COD': 'Dem. Rep. Congo',
+            'CAF': 'Central African Rep.',
+            'USA': 'United States of America',
+            'TUR': 'Turkey',
+            'PHL': 'Philippines',
+            'CIV': "Côte d'Ivoire",
+            'BIH': 'Bosnia and Herz.',
+            'PSE': 'Palestine'
         }
 
         # Apply the fix to your tension map
