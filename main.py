@@ -109,6 +109,14 @@ def main():
             'PSE': 'Palestine',
             'FLK': 'Falkland Is.',
             'SOL': 'Somaliland'
+            'COG': 'Congo',
+            'LSO': 'Lesotho',
+            'TLS': 'Timor-Leste',
+            'ESH': 'W. Sahara',
+            'CZE': 'Czechia',
+            'BTN': 'Bhutan',
+            'VUT': 'Vanuatu',
+            'ATA': 'Antarctica'
         }
 
         # Apply the fix to your tension map
