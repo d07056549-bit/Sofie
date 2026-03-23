@@ -60,33 +60,37 @@ class SofieVisualizer:
         ax3.set_xlim(0, 115)
         ax3.get_yaxis().set_visible(False)
 
-        # --- PANEL D: LIVE PORT ALERTS (Far Right Sidebar) ---
-        ax4 = fig.add_axes([0.82, 0.05, 0.15, 0.9]) 
-        ax4.set_facecolor('#F1F3F5')
-        ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=16, fontweight='bold', pad=20)
+        # --- PANEL D: LIVE PORT ALERTS (Sidebar) ---
+        ax4 = fig.add_axes([0.82, 0.05, 0.15, 0.9])
+        ax4.set_facecolor('#F8F9FA') # Clean light grey
+        ax4.set_xticks([])
+        ax4.set_yticks([])
+        ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold', pad=15)
+
+        y_pos = 0.95
+        risk_keywords = ['threat', 'crisis', 'conflict', 'war', 'strike', 'delay', 'attack', 'blocked']
         
-        y_pos = 0.92
-        # Keywords that trigger a "Risk" warning (Red)
-        risk_keywords = ['strike', 'conflict', 'war', 'shut', 'closed', 'delay', 'attack', 'piracy', 'incident']
-        # Keywords that trigger a "Growth" sign (Green)
-        growth_keywords = ['expansion', 'new', 'growth', 'opened', 'launch', 'investment', 'record']
-
-        for alert in alerts[:8]:
-            title = alert['title'].lower()
+        # This loop is where the magic happens
+        for alert in alerts[:10]: # Draw up to 10 alerts
+            title_text = alert.get('title', 'No Title Available')
+            clean_title = (title_text[:55] + '..') if len(title_text) > 55 else title_text
             
-            # Determine Color based on sentiment
-            text_color = '#212529' # Default Black
-            if any(word in title for word in risk_keywords):
-                text_color = '#DC3545' # Red for Risk
-            elif any(word in title for word in growth_keywords):
-                text_color = '#28A745' # Green for Growth
+            # Sentiment Color Logic
+            text_color = '#495057' # Default dark grey
+            if any(word in clean_title.lower() for word in risk_keywords):
+                text_color = '#D00000' # High Alert Red
 
-            # Draw the title with the new color
-            ax4.text(0.05, y_pos, f"• {alert['title'][:45]}...", 
-                    transform=ax4.transAxes, fontsize=10, 
-                    color=text_color, fontweight='bold', 
-                    verticalalignment='top', wrap=True)
-            y_pos -= 0.11
+            # DRAWING THE TEXT
+            ax4.text(0.05, y_pos, f"• {clean_title}", 
+                    transform=ax4.transAxes, 
+                    fontsize=9, 
+                    color=text_color, 
+                    fontweight='bold',
+                    va='top', 
+                    ha='left',
+                    wrap=True)
+            
+            y_pos -= 0.09
             
         ax4.get_xaxis().set_visible(False)
         ax4.get_yaxis().set_visible(False)
