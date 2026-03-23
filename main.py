@@ -228,22 +228,6 @@ def main():
         suffix=file_suffix
     )
 
-    # --- NEW: DATA COVERAGE AUDIT (Aligned with the code above) ---
-    # Note: 'world' must be accessible here. 
-    # If 'world' was defined inside the 'try' block, move this audit inside there too.
-    try:
-        import geopandas as gpd
-        world_data = gpd.read_file("https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip")
-        all_countries = set(world_data['NAME'].unique())
-        covered_countries = set(tension_map_data.keys())
-        missing = all_countries - covered_countries
-        
-        print(f"📊 DATA COVERAGE: {len(covered_countries)}/{len(all_countries)} countries mapped.")
-        if missing:
-            print(f"⚠️ MISSING NODES (Sample): {list(missing)[:10]}")
-    except Exception as audit_err:
-        print(f"⚠️ Audit skipped: {audit_err}")
-
     # 7. LOGS & SUMMARY
     record_history(stability_score, args.scenario)
 
