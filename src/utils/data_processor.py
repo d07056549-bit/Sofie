@@ -4,7 +4,6 @@ import feedparser
 
 class SofieDataEngine:
     def __init__(self, root_dir=r"C:\Users\Empok\Documents\GitHub\Sofie"):
-        # We use a clean absolute path to avoid the "Data/raw\Data" double-nesting
         self.root = root_dir
         self.maritime_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Supply Chain\Port\Maritime Port Performance Project Dataset.csv"
 
@@ -18,29 +17,44 @@ class SofieDataEngine:
             return [{"title": "Feed Offline", "summary": "Direct CSV data only."}]
 
     def run_all(self):
-        print(">>> ENGINE STARTING: Processing Maritime & Trade Streams...")
+        print(">>> ENGINE STARTING: Processing Maritime Streams...")
         
-        # 1. Initialize empty friction dict (The "Backfill")
-        friction_results = {}
+        port_map = {}
+        global_avg_friction = 1.0 # Default fallback
         
-        # 2. Check and Load Maritime Data
         if os.path.exists(self.maritime_path):
             print(f"✅ MARITIME SENSOR: Online")
             try:
                 df = pd.read_csv(self.maritime_path)
-                # Map the CSV data into the format main.py expects: {PortName: FrictionValue}
-                # Assuming your CSV has 'Port Name' and 'Friction' columns
+                
+                # Detect column names automatically
+                name_col = 'Port Name' if 'Port Name' in df.columns else df.columns[0]
+                fric_col = 'Friction' if 'Friction' in df.columns else 'Performance'
+                lat_col = 'Latitude' if 'Latitude' in df.columns else 'Lat'
+                lon_col = 'Longitude' if 'Longitude' in df.columns else 'Lon'
+
                 for _, row in df.iterrows():
-                    port_name = str(row.get('Port Name', 'Unknown'))
-                    friction_results[port_name] = row.get('Friction', 1.0) # Default to 1.0 if missing
+                    p_name = str(row[name_col])
+                    val = float(row.get(fric_col, 1.0))
+                    port_map[p_name] = {
+                        "friction": val,
+                        "lat": float(row.get(lat_col, 0.0)),
+                        "lon": float(row.get(lon_col, 0.0))
+                    }
+                
+                # Calculate the Global Average (This is what main.py needs for line 55)
+                if port_map:
+                    global_avg_friction = sum(p['friction'] for p in port_map.values()) / len(port_map)
+                    
             except Exception as e:
                 print(f"⚠️ Error reading CSV: {e}")
         else:
             print(f"❌ MARITIME SENSOR: Missing at {self.maritime_path}")
 
-        # 3. Return EVERYTHING main.py needs
+        # --- CRITICAL: Ensure 'friction' is a FLOAT, not a DICT ---
         return {
             "alerts": self.get_live_port_alerts(),
-            "friction": friction_results,  # THIS FIXES THE KeyError: 'friction'
+            "friction": float(global_avg_friction), # This number fixes the TypeError
+            "port_map": port_map,                  # This dict is for the Visualizer
             "status": "Operational"
         }
