@@ -6,7 +6,7 @@ class SofieDataEngine:
     def __init__(self, root_dir=r"C:\Users\Empok\Documents\GitHub\Sofie"):
         # We use a clean absolute path to avoid the "Data/raw\Data" double-nesting
         self.root = root_dir
-        self.maritime_path = os.path.join(self.root, "Data", "Maritime Port Performance Project Dataset.csv")
+        self.maritime_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Supply Chain\Port\Maritime Port Performance Project Dataset.csv"
 
     def get_live_port_alerts(self):
         """Scrapes the live maritime feed."""
