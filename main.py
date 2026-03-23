@@ -19,20 +19,20 @@ def record_history(score, scenario_name, output_path="exports/"):
         f.write(f"{timestamp},{scenario_name},{score}\n")
 
 def main():
-    # 1. Setup CLI
-    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | Nexus Live")
+    # 1. Setup CLI (Defining 'args' first to prevent NameError)
+    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | March 23 Nexus")
     parser.add_argument('--scenario', type=str, default='baseline', 
                         choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'])
     args = parser.parse_args()
 
-    # DYNAMIC TIME UPDATE
+    # DYNAMIC TIME FOR MARCH 23
     now = datetime.now()
     live_date = now.strftime("%B %d, %Y")
     live_time = now.strftime("%H:%M")
 
     print("="*55)
     print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"LIVE DATE: {live_date} | TIME: {live_time} GMT")
+    print(f"DATE: {live_date} | TIME: {live_time} GMT")
     print("="*55 + "\n")
 
     # 2. Data Ingestion (CSVs + News)
