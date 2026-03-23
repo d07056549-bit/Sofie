@@ -83,16 +83,14 @@ def main():
 
     print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-   # 6. Map Generation (Risk & Logistics)
-    # --- DEFINE THE SUFFIX HERE ---
+# 6. Map Generation Setup
     file_suffix = now.strftime("%H%M") 
-    
     at_risk_list = data_engine.get_at_risk_countries()
-    SofieMapper().generate_risk_map(at_risk_list, suffix=file_suffix)
-    
     friction_data = data_engine.get_port_friction_map()
-    # Now file_suffix exists and can be passed here:
-    LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
+
+    # Note: We skip individual maps because Unified Dashboard (Section 7) handles them better.
+    # SofieMapper().generate_risk_map(at_risk_list, suffix=file_suffix)
+    # LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
    # 7. Unified Dashboard Generation
     # 1. Fetch the Live Feed using the existing engine
