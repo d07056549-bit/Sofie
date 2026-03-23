@@ -120,7 +120,7 @@ def main():
     else:
         print("STATUS: STABLE. Monitoring regional friction nodes.")
     print("="*55)
-    print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
+    print("--- RUN COMPLETE ---\n")
 
 if __name__ == "__main__":
     main()
