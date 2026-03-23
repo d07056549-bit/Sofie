@@ -80,8 +80,15 @@ def main():
     # Now file_suffix exists and can be passed here:
     LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
-    # 7. Dashboard & Logging
-    SofieVisualizer().generate_risk_chart(stability_score, curr)
+    # 7. Unified Dashboard Generation
+    # We pass the score, the risk list, and the friction data into one function
+    SofieVisualizer().generate_unified_intel(
+        score=stability_score, 
+        at_risk=at_risk_list, 
+        friction=friction_data, 
+        suffix=file_suffix
+    )
+    
     record_history(stability_score, args.scenario)
 
     # 8. SitRep Summary
