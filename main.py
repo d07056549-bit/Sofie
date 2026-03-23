@@ -82,13 +82,13 @@ def main():
 
     # 8. SitRep Summary
     print("="*55)
-    print(f"--- SITREP SUMMARY: {current_date.upper()} ---")
-    # ... logic ...
+    # CHANGE 'current_date' TO 'live_date' HERE:
+    print(f"--- SITREP SUMMARY: {live_date.upper()} ---") 
+    
     if stability_score > 75:
-        print("STATUS: CRITICAL WATCH. Ultimatum expires in <36 hours.")
-        print(f"ALERT: Contagion detected in {at_risk_list[:3]}.")
+        print("STATUS: CRITICAL WATCH. Ultimatum window CLOSING.")
     else:
-        print("STATUS: STABLE. No immediate kinetic escalation detected.")
+        print("STATUS: STABLE. Monitoring regional friction nodes.")
     print("="*55)
     print("--- RUN COMPLETE | ALL EXPORTS SAVED TO /exports ---\n")
 
