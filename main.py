@@ -97,26 +97,27 @@ def main():
 
         # --- ENHANCED ISO & NAME MAPPING ---
         iso_fix = {
-            # Map-Name Sync for Missing Nodes
+            # Map-Name Sync for your specific Missing Nodes
             'VNM': 'Vietnam',
+            'CIV': "Côte d'Ivoire",
             'SSD': 'S. Sudan',
-            'COG': 'Congo',
+            'FLK': 'Falkland Is.',
+            'TLS': 'Timor-Leste',
+            'DOM': 'Dominican Rep.',
             'LSO': 'Lesotho',
+            'CYP': 'N. Cyprus',
+            'CZE': 'Czechia',
+            'CAF': 'Central African Rep.',
+            # Essential Power-Users
+            'COD': 'Dem. Rep. Congo',
+            'COG': 'Congo',
             'GNQ': 'Eq. Guinea',
             'VUT': 'Vanuatu',
             'BRN': 'Brunei',
-            'CYP': 'N. Cyprus',
-            'FLK': 'Falkland Is.',
-            'ATF': 'Fr. S. Antarctic Lands',
-            'CZE': 'Czechia',
-            # Strategic Essentials
-            'COD': 'Dem. Rep. Congo',
-            'CAF': 'Central African Rep.',
+            'BTN': 'Bhutan',
             'USA': 'United States of America',
             'TUR': 'Turkey',
             'PHL': 'Philippines',
-            'CIV': "Côte d'Ivoire",
-            'BIH': 'Bosnia and Herz.',
             'PSE': 'Palestine'
         }
 
