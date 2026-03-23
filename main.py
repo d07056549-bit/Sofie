@@ -62,6 +62,22 @@ def main():
             if any(word in news for word in ["blockade", "strike", "ultimatum"]):
                 news_multiplier = 1.4
 
+    base_stability = data_engine.calculate_stability_index()
+    
+    # Check the CLI --scenario flag
+    if args.scenario == "blackout" or args.scenario == "ultimatum_expires":
+        # Force the score higher (more risk) regardless of news
+        stability_score = round(base_stability * 1.5 * news_multiplier, 2)
+        status_msg = f"CRITICAL: Scenario '{args.scenario.upper()}' engaged. Rerouting required."
+        print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED - Stability Index adjusted for risk.")
+    else:
+        # Normal calculation
+        stability_score = round(base_stability * news_multiplier, 2)
+        status_msg = "STABLE. Monitoring regional friction nodes."
+
+    # Make sure we don't exceed 100%
+    stability_score = min(stability_score, 100.0)
+
     # 4. Scenario Definitions
     scenarios = {
         'baseline': {
@@ -74,7 +90,17 @@ def main():
         'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'sovereign_risk_entities': 110}
     }
 
-    # 5. Stability Index Calculation
+    # 5. Apply the selected Scenario
+    current_scenario = scenarios.get(args.scenario, scenarios['baseline'])
+    
+    # Now update your stability score using the scenario values
+    stability_score = min(current_scenario['port_friction'] * 10, 100.0) 
+    # -----------------------------------------
+
+    # 6. Get the News Feed (for the sidebar)
+    live_alerts = data_engine.get_live_port_alerts()
+    
+    # 7. Stability Index Calculation
     curr = scenarios[args.scenario]
     oil_comp = (min(curr['oil_price'], 200) / 200) * 45
     fric_comp = (min(curr['port_friction'], 5) / 5) * 30
@@ -83,7 +109,7 @@ def main():
 
     print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
 
-# 6. Map Generation Setup
+    # 8. Map Generation Setup
     file_suffix = now.strftime("%H%M") 
     at_risk_list = data_engine.get_at_risk_countries()
     friction_data = data_engine.get_port_friction_map()
@@ -92,7 +118,7 @@ def main():
     # SofieMapper().generate_risk_map(at_risk_list, suffix=file_suffix)
     # LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
-   # 7. Unified Dashboard Generation
+   # 9. Unified Dashboard Generation
     # 1. Fetch the Live Feed using the existing engine
     live_alerts = data_engine.get_live_port_alerts() 
     
