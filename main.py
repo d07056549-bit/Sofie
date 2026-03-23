@@ -53,7 +53,7 @@ def main():
         'baseline': {
             'oil_price': 112.19, # Current Brent Spot
             'port_friction': live_stats['friction'] * news_multiplier,
-            'sovereign_risk_entities': 96 + (live_stats['fatalities'] // 200)
+            'sovereign_risk_entities': int(96 * live_stats['friction'])
         },
         'peace': {'oil_price': 72.50, 'port_friction': 1.0, 'sovereign_risk_entities': 45},
         'blackout': {'oil_price': 185.00, 'port_friction': 5.0, 'sovereign_risk_entities': 142},
