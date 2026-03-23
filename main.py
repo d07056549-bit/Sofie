@@ -137,13 +137,29 @@ def main():
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
-        
-        # --- FIX: Ensure ISO exists for the Visualizer ---
-        # We create a reverse map from our iso_fix dictionary to fill in missing ISOs
-        name_to_iso = {v: k for k, v in iso_fix.items()}
-        if 'ISO' not in acled_df.columns:
-            acled_df['ISO'] = acled_df[c_col].map(name_to_iso).fillna('GLOBAL')
 
+        # --- THE AUTO-BRIDGE: Learning ISOs from the Map ---
+        import geopandas as gpd
+        world_temp = gpd.read_file("https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip")
+        
+        # Create a lookup dictionary from the map itself {Name: ISO_CODE}
+        # We check both 'NAME' and 'SOVEREIGNT' to catch variations
+        map_lookup = pd.concat([
+            world_temp.set_index('NAME')['ISO_A3'],
+            world_temp.set_index('SOVEREIGNT')['ISO_A3']
+        ]).to_dict()
+        
+        # Add our manual overrides for the tricky ones
+        map_lookup.update({
+            'United States': 'USA',
+            'Dem. Rep. Congo': 'COD',
+            'Turkey': 'TUR',
+            'Vietnam': 'VNM'
+        })
+
+        # Apply the bridge to the ACLED data
+        acled_df['ISO'] = acled_df[c_col].map(map_lookup).fillna('GLOBAL')
+        
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
         def calculate_nexus(row):
