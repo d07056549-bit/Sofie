@@ -19,15 +19,16 @@ def record_history(score, scenario_name, output_path="exports/"):
         f.write(f"{timestamp},{scenario_name},{score}\n")
 
 def main():
-    # 1. Setup CLI
-    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | March 22, 2026 Nexus")
-    parser.add_argument('--scenario', type=str, default='baseline', 
-                        choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'])
-    args = parser.parse_args()
+    # ... setup code ...
+
+    # GET REAL TIME
+    now = datetime.now()
+    current_date = now.strftime("%B %d, %Y")
+    current_time = now.strftime("%H:%M")
 
     print("="*55)
     print(f"--- SOFIE EVOLVED v2.0 | SYSTEM INITIALIZED ---")
-    print(f"DATE: March 22, 2026 | TIME: 21:40 GMT")
+    print(f"DATE: {current_date} | TIME: {current_time} GMT") # <--- DYNAMIC
     print("="*55 + "\n")
 
     # 2. Data Ingestion (CSVs + News)
@@ -77,7 +78,8 @@ def main():
 
     # 8. SitRep Summary
     print("="*55)
-    print("--- SITREP SUMMARY: MARCH 22, 2026 ---")
+    print(f"--- SITREP SUMMARY: {current_date.upper()} ---")
+    # ... logic ...
     if stability_score > 75:
         print("STATUS: CRITICAL WATCH. Ultimatum expires in <36 hours.")
         print(f"ALERT: Contagion detected in {at_risk_list[:3]}.")
