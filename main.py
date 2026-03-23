@@ -165,7 +165,7 @@ def main():
         
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
-        def calculate_nexus(row, displacement_map):
+def calculate_nexus(row, displacement_map):
     """
     Calculates the 2026 Quad-Nexus Score by balancing:
     1. Hazard Index (Conflict Data) - 40%
