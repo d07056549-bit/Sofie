@@ -55,15 +55,24 @@ class SofieVisualizer:
                       color=text_color, fontsize=24, pad=20, fontweight='bold')
         ax1.set_axis_off()
 
-        # --- PANEL B: MARITIME FRICTION NODES ---
+        # --- PANEL B: MARITIME FRICTION NODES (Fixed Scaling) ---
         ax2 = fig.add_axes([0.05, 0.05, 0.20, 0.15])
         ax2.set_facecolor(bg_panel)
-        for port, data in friction.items():
-            f_val = data.get('friction', 1.0)
-            color = '#DC3545' if f_val > 1.2 else '#28A745'
-            ax2.scatter(data.get('lon', 0), data.get('lat', 0), s=150, c=color, edgecolors='white', zorder=3)
-            ax2.text(data.get('lon', 0)+1, data.get('lat', 0), port.upper()[:10], fontsize=8)
         
+        # Plot the dots
+        for port, data in friction.items():
+            lon = data.get('lon', 0)
+            lat = data.get('lat', 0)
+            f_val = data.get('friction', 1.0)
+            
+            color = '#DC3545' if f_val > 1.2 else '#28A745'
+            ax2.scatter(lon, lat, s=150, c=color, edgecolors='white', zorder=3)
+            ax2.text(lon + 2, lat, port.upper()[:10], fontsize=8, fontweight='bold')
+        
+        # CRITICAL: Set the limits to show the whole world map in this small box
+        ax2.set_xlim(-180, 180)
+        ax2.set_ylim(-60, 80)
+        ax2.set_axis_off() # Keeps it clean
         ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=16, fontweight='bold')
 
         # --- PANEL C: STABILITY INDEX GAUGE ---
