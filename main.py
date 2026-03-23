@@ -101,6 +101,19 @@ def main():
         # Note: This file uses a semicolon (;) as a separator
         hazard_df = pd.read_csv(hazard_path, sep=';')
 
+        # Add this inside your Hazard loading block to sync EM-DAT with your Map
+iso_fix = {
+    'TUR': 'Turkey', 
+    'SYR': 'Syria',
+    'PHL': 'Philippines',
+    'USA': 'United States of America',
+    'RUS': 'Russia',
+    'CHN': 'China'
+}
+
+# When you create your hazard_map, you can map it back to names if your map uses names:
+hazard_map_names = {iso_fix.get(iso, iso): val for iso, val in hazard_map.items()}
+
         # We'll use the most recent full year (2023) to create a 'Hazard Intensity'
         recent_hazards = hazard_df[hazard_df['Year'] == 2023].copy()
         
