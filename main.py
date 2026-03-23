@@ -10,35 +10,31 @@ from src.utils.visualizer import SofieVisualizer
 from src.utils.data_processor import SofieDataEngine
 
 def fetch_live_world_tension():
-    """Uses the gdeltdoc client to analyze real-time global news volume."""
+    """Optimized live feed for broader news capture."""
     print("📡 ANALYZING LIVE GLOBAL NEWS STREAM (GDELT 2.0)...")
     
-    # 1. Setup Filters for Conflict & Crisis
-    # We look for keywords that drive 'World Tension'
+    # Using 'timespan' instead of specific dates is much more reliable
     f = Filters(
-        keyword = "(conflict OR military OR crisis OR blockade OR war)",
-        start_date = "2026-03-22",
-        end_date = "2026-03-23"
+        keyword = "(conflict OR military OR crisis OR blockade)", 
+        timespan = "24h" # Scans the last 24 hours relative to NOW
     )
-
     gd = GdeltDoc()
 
     try:
-        # 2. Search for Timeline Volume (Percentage of global news coverage)
-        # mode="timelinevol" returns how much of the world's news is about these topics
         timeline = gd.timeline_search("timelinevol", f)
         
-        if not timeline.empty:
-            # Get the very latest volume value
+        if timeline is not None and not timeline.empty:
             latest_vol = timeline['value'].iloc[-1]
-            
-            # GDELT volume is a percentage (e.g., 0.5% of all global news).
-            # We multiply by a factor (e.g., 20) to turn it into a 0-100 Tension Score.
-            # If 5% of all news on earth is about 'war', tension should be 100%.
-            live_score = min(float(latest_vol) * 20, 100) 
+            # News volume is usually a small decimal (e.g. 0.05%)
+            # We multiply by 100 to get a 0-100 scale
+            live_score = min(float(latest_vol) * 100, 100) 
             return round(live_score, 2)
-            
+        
         print("⚠️ GDELT returned empty timeline. Using historical baseline.")
+        return None
+        
+    except Exception as e:
+        print(f"⚠️ GDELT Client Error: {e}. Reverting to Historical CSV.")
         return None
         
     except Exception as e:
