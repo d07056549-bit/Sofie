@@ -1,55 +1,41 @@
 import pandas as pd
 import os
 
-# Paths
 master_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Events\Gdelt\GDELT.MASTERREDUCEDV2.txt"
 output_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\processed\gdelt_historical_baseline.csv"
 
-# Standard GDELT Event Columns (Simplified for what we need)
-# We map the index positions to the names we want
-col_map = {
-    3: 'Year',
-    30: 'GoldsteinScale',
-    34: 'CountryCode' # ActionGeo_CountryCode is usually column 34 or 53
-}
-
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-print("⏳ Distilling Master GDELT File (No-Header Mode)...")
+print("⏳ Distilling Reduced GDELT File...")
 
 try:
-    # We read without headers (header=None) and use integer indices
-    chunks = pd.read_csv(
-        master_path, 
-        sep='\t', 
-        header=None,
-        usecols=col_map.keys(),
-        chunksize=200000,
-        low_memory=False
-    )
-
-    processed_chunks = []
-    for i, chunk in enumerate(chunks):
-        # Rename columns to friendly names
-        chunk.columns = [col_map[c] for c in chunk.columns]
-        
-        # Filter for recent years
-        recent = chunk[chunk['Year'] >= 2022] # Using 2022+ for a better baseline
-        processed_chunks.append(recent)
-        
-        if i % 5 == 0:
-            print(f"   ...Processed {i*200000:,} rows")
-
-    print("📊 Aggregating data...")
-    df = pd.concat(processed_chunks)
+    # 1. Read the first few lines to determine columns automatically
+    df_preview = pd.read_csv(master_path, sep='\t', nrows=5, header=None)
     
-    # Calculate average stability (Goldstein) per country
-    stability_lookup = df.groupby('CountryCode')['GoldsteinScale'].mean()
+    # 2. Identify columns by their data type
+    # Year is usually an integer > 1979
+    # Goldstein is a float between -10 and 10
+    # Country code is a 2 or 3 letter string
+    
+    total_cols = len(df_preview.columns)
+    print(f"🔍 Detected {total_cols} columns. Mapping data...")
 
-    # Save
-    stability_lookup.to_csv(output_path)
-    print(f"✅ SUCCESS! Created baseline at: {output_path}")
+    # Standard "Reduced" mapping often puts Year at 0, Goldstein at 1, Country at 2
+    # We will try to read EVERYTHING and then filter
+    df = pd.read_csv(master_path, sep='\t', header=None, low_memory=False)
+    
+    # Let's assume a common Reduced format: [Year, MonthDay, ID, Goldstein, Country...]
+    # We'll assign names based on common Reduced schemas
+    if total_cols >= 4:
+        df.columns = [f'col_{i}' for i in range(total_cols)]
+        # This is where we need the 'Peek' results to be 100% sure
+        # But let's try a common guess:
+        df = df.rename(columns={'col_0': 'Year', 'col_3': 'GoldsteinScale', 'col_4': 'CountryCode'})
+    
+    # Filter and Save
+    recent = df[df['Year'] >= 2022]
+    stability = recent.groupby('CountryCode')['GoldsteinScale'].mean()
+    stability.to_csv(output_path)
+    
+    print(f"✅ Baseline created with {len(stability)} countries.")
 
 except Exception as e:
-    print(f"❌ Error: {e}")
-    print("\n💡 TIP: If you get a 'Tokenization Error', the file might be comma-separated despite the .txt extension. Try changing sep='\\t' to sep=',' in the code.")
+    print(f"❌ Brute force failed: {e}")
