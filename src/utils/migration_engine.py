@@ -17,7 +17,7 @@ class MigrationEngine:
             
             # Aggregate 'Value' by Country of Origin
             # Converting '*' to 1 (minimal) and others to numeric
-            current_data.loc[:, 'Value'] = pd.to_numeric(current_data['Value'].replace('*', 1), errors='coerce').fillna(0)
+            current_data['Value'] = pd.to_numeric(current_data['Value'].replace('*', 1), errors='coerce').fillna(0)
             
             displacement_stats = current_data.groupby('Origin')['Value'].sum().reset_index()
             displacement_stats.columns = ['COUNTRY', 'DISPLACEMENT_VOL']
