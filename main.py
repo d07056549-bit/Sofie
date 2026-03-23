@@ -54,7 +54,6 @@ def main():
     live_stats = data_engine.run_all()
     
     # 3. Crisis Intelligence Multiplier
-    # Logic: If 'blockade' is in the news, global fragility spikes by 40%
     news_multiplier = 1.0
     if os.path.exists("news_feed.txt"):
         with open("news_feed.txt", "r") as f:
@@ -62,16 +61,13 @@ def main():
             if any(word in news for word in ["blockade", "strike", "ultimatum"]):
                 news_multiplier = 1.4
 
-    base_stability = data_engine.calculate_stability_index()
+    base_stability = round(live_stats.get('friction', 1.0) * 35.0, 2)
     
     # Check the CLI --scenario flag
-    if args.scenario == "blackout" or args.scenario == "ultimatum_expires":
-        # Force the score higher (more risk) regardless of news
+    if args.scenario in ["blackout", "ultimatum_expires"]:
         stability_score = round(base_stability * 1.5 * news_multiplier, 2)
-        status_msg = f"CRITICAL: Scenario '{args.scenario.upper()}' engaged. Rerouting required."
-        print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED - Stability Index adjusted for risk.")
+        print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED - Risk adjusted.")
     else:
-        # Normal calculation
         stability_score = round(base_stability * news_multiplier, 2)
         status_msg = "STABLE. Monitoring regional friction nodes."
 
