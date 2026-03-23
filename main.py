@@ -226,6 +226,7 @@ def main():
         friction=data_engine.get_port_friction_map(),
         alerts=data_engine.get_live_port_alerts(),
         suffix=file_suffix
+        displacement_map=displacement_map
     )
 
     # 7. LOGS & SUMMARY
