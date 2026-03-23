@@ -63,48 +63,29 @@ def main():
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. GEOPOLITICAL CONSENSUS (World Tension Model)
-    tension_map_data = {} # Initialize empty dict for the map
+    # 3. GEOPOLITICAL CONSENSUS (Nexus: History + Live)
+    live_tension = fetch_live_world_tension()
     
     try:
-        # Load ACLED (Tactical/Riots)
+        # Load CSV History (The "Memory")
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
-        acled_df.columns = [c.upper() for c in acled_df.columns]
-        latest_year_acled = acled_df['YEAR'].max()
-        
-        # Filter for latest year and get Top 10 for the Global Score
-        acled_latest = acled_df[acled_df['YEAR'] == latest_year_acled]
-        top_acled_score = acled_latest['CONFLICT_INDEX'].nlargest(10).mean()
+        hist_score = acled_df[acled_df['YEAR'] == 2026]['CONFLICT_INDEX'].nlargest(10).mean()
 
-        # Load UCDP (Strategic/Warfare)
-        ucdp_df = pd.read_csv("Data/processed/ucdp_risk_indices.csv")
-        ucdp_df.columns = [c.upper() for c in ucdp_df.columns]
-        latest_year_ucdp = ucdp_df['YEAR'].max()
-        
-        # Filter for latest year and get Top 10 for the Global Score
-        ucdp_latest = ucdp_df[ucdp_df['YEAR'] == latest_year_ucdp]
-        top_ucdp_score = ucdp_latest['UCDP_RISK_INDEX'].nlargest(10).mean()
+        # BLEND LOGIC: 60% History (CSV) + 40% Live Feed (GDELT)
+        if live_tension:
+            world_tension = (hist_score * 0.6) + (live_tension * 0.4)
+            print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Nexus Blend: {live_tension}% Live / {hist_score:.1f}% Hist)")
+        else:
+            world_tension = hist_score
+            print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Historical Mode Only)")
 
-        # --- CALCULATE GLOBAL TENSION ---
-        world_tension = (top_acled_score + top_ucdp_score) / 2
         global_conflict_avg = world_tension
-        
-        # --- PREPARE DATA FOR THE MAP ---
-        # We merge the two datasets to get a single score per country for the heatmap
-        # ACLED is our base, UCDP adds strategic depth
-        acled_map = acled_latest.set_index('COUNTRY')['CONFLICT_INDEX']
-        ucdp_map = ucdp_latest.set_index('COUNTRY')['UCDP_RISK_INDEX']
-        
-        # Combine them (taking the max risk score found in either dataset)
-        combined_map = pd.concat([acled_map, ucdp_map], axis=1).fillna(0).max(axis=1)
-        tension_map_data = combined_map.to_dict()
-
-        print(f"🌍 WORLD TENSION: Current Flashpoint Intensity at {world_tension:.2f}%")
+        # Generate the dict for the map
+        tension_map_data = acled_df[acled_df['YEAR'] == 2026].set_index('COUNTRY')['CONFLICT_INDEX'].to_dict()
         
     except Exception as e:
-        print(f"⚠️ Tension Calculation Error: {e}")
-        global_conflict_avg = 0.47 
-        tension_map_data = {} # Map will fall back to grey if this fails
+        print(f"⚠️ Geopolitical Engine Error: {e}")
+        global_conflict_avg = 23.79
 
     # 4. SCENARIO LOGIC
     scenarios = {
