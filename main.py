@@ -173,6 +173,16 @@ def main():
         alerts=data_engine.get_live_port_alerts(), 
         suffix=file_suffix
     )
+
+    # --- DATA COVERAGE AUDIT ---
+        all_countries = set(world['NAME'].unique())
+        covered_countries = set(tension_map_data.keys())
+        missing = all_countries - covered_countries
+        
+        print(f"📊 DATA COVERAGE: {len(covered_countries)}/{len(all_countries)} countries mapped.")
+        if missing:
+            # We only print the first 10 so it doesn't flood your screen
+            print(f"⚠️ MISSING NODES (Sample): {list(missing)[:10]}")
     
     # 7. LOGS & SUMMARY
     record_history(stability_score, args.scenario)
