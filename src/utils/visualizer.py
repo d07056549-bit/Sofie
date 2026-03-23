@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 
 class SofieVisualizer:
-    def __init__(self, output_path="exports/"):
+    def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
         self.output_path = output_path
-        os.makedirs(output_path, exist_ok=True)
+        os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
-
+        
     def generate_unified_intel(self, score, at_risk, friction, suffix=""):
         # 1. Setup the Master Canvas (Pure White)
         bg_main = '#FFFFFF'
