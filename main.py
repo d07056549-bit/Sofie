@@ -73,71 +73,79 @@ def main():
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. GEOPOLITICAL NEXUS (Deep Memory + Live Analysis)
-    global_conflict_avg = 28.5 # Safe starting value
-    tension_map_data = {}      # Initialize so it doesn't crash later
+    # 3. GEOPOLITICAL NEXUS (The "Trinity": ACLED + GDELT + GPR)
+    global_conflict_avg = 28.5 
+    tension_map_data = {}      
 
     try:
-        # A. Load your massive 90M-row historical baseline
+        # A. LOAD HISTORICAL MEMORY (GDELT - 90M Rows)
         baseline_path = "Data/processed/gdelt_historical_baseline.csv"
-        # Note: We use index_col=0 because CountryCode is the first column
         baseline_df = pd.read_csv(baseline_path, index_col=0)
-        baseline_map = baseline_df.iloc[:, 0].to_dict() # Map Country -> Goldstein
+        baseline_map = baseline_df.iloc[:, 0].to_dict()
 
-        # B. Load your 2026 ACLED Conflict Data
+        # B. LOAD RECENT SENTIMENT (Caldara & Iacoviello GPR)
+        gpr_path = r"Data/raw/Events/Geopolitical Risk/data_gpr_export.xls - Sheet1.csv"
+        gpr_df = pd.read_csv(gpr_path)
+        latest_gpr_row = gpr_df.iloc[-1]
+        # Mapping ISO3 (ARG, CHN) to a normalized 0-100 score
+        gpr_map = {col.replace('GPRC_', ''): latest_gpr_row[col] for col in gpr_df.columns if col.startswith('GPRC_')}
+
+        # C. LOAD LIVE EVENTS (ACLED 2026)
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
-        
-        # Determine the correct country/country-code column
-        # ACLED usually uses 'COUNTRY' or 'ISO'
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
-        
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
-        # --- NEW: FLASHPOINT DETECTOR (ANOMALY ALERTS) ---
-        current_risks['DELTA'] = 0.0
-        
-        for idx, row in current_risks.iterrows():
+        # --- THE TRINITY CALCULATION ---
+        def calculate_nexus(row):
             country = str(row[c_col])
-            current = row['CONFLICT_INDEX']
+            # 1. ACLED (Current Violence): 0-100
+            current = row.get('CONFLICT_INDEX', 50)
+            
+            # 2. GDELT (Historical Average): Normalized to 0-100
             hist_avg = baseline_map.get(country, 0.0)
             hist_tension = ((hist_avg - 10) / -20) * 100
             
-            # Calculate how much today deviates from history
-            current_risks.at[idx, 'DELTA'] = current - hist_tension
+            # 3. GPR (Strategic Sentiment): Normalized to 0-100 (using max share as 5.0)
+            # Note: We use a simple ISO3 approximation or default to global GPR
+            iso3_code = row.get('ISO', 'GLOBAL') # Ensure your ACLED file has an ISO column
+            sentiment = gpr_map.get(iso3_code, latest_gpr_row['GPR'] / 2.0)
+            sentiment_n = min(sentiment * 20, 100) # Scaling factor
 
-        # Sort by the biggest positive deviation (Current > History)
-        flashpoints = current_risks.sort_values(by='DELTA', ascending=False).head(3)
+            # WEIGHTED BLEND: 50% Current, 25% History, 25% Sentiment
+            return (current * 0.50) + (hist_tension * 0.25) + (sentiment_n * 0.25)
 
-        print("\n🚨 STRATEGIC ANOMALY ALERTS (Deviation from 90M-Row Baseline):")
-        for _, alert in flashpoints.iterrows():
-            status = "🔴 CRITICAL" if alert['DELTA'] > 30 else "🟡 ELEVATED"
-            print(f"   {status} | {alert[c_col]}: +{alert['DELTA']:.1f}% above historical norm")
-        print("")
+        current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_nexus, axis=1)
         
-        def calculate_anomaly(row):
-            country_name = str(row[c_col])
-            current_score = row.get('CONFLICT_INDEX', 50) # Fallback to 50
-            
-            # Get historical average (Default to 0.0 if not found)
-            hist_avg = baseline_map.get(country_name, 0.0)
-            
-            # Convert Goldstein (-10 to 10) to 0-100 Tension
-            hist_tension = ((hist_avg - 10) / -20) * 100
-            
-            # Return weighted average: 70% Today's Events, 30% Long-term Context
-            return (current_score * 0.7) + (hist_tension * 0.3)
-
-        current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_anomaly, axis=1)
-        
-        # Update Dashboard Variables
+        # Dashboard Variables
         global_conflict_avg = current_risks['NEXUS_SCORE'].mean()
         tension_map_data = current_risks.set_index(c_col)['NEXUS_SCORE'].to_dict()
 
-        print(f"🌍 NEXUS INTEGRATION COMPLETE: Global Intensity at {global_conflict_avg:.2f}%")
+        print(f"🌍 TRINITY NEXUS ONLINE: Global Intensity at {global_conflict_avg:.2f}%")
 
     except Exception as e:
         print(f"⚠️ Nexus Integration Error: {e}")
+
+    # 4. SCENARIO LOGIC (Market Driven by gpr_master_pro.csv)
+    try:
+        market_path = r"Data/raw/Events/Geopolitical Risk/gpr_master_pro.csv"
+        market_df = pd.read_csv(market_path)
+        latest_market = market_df.iloc[-1]
+        
+        # Baseline is now driven by your real CSV data!
+        live_oil = latest_market.get('Brent', 85.0)
+        live_gold = latest_market.get('Gold', 2000.0)
+
+        scenarios = {
+            'baseline': {'oil': live_oil, 'conflict': global_conflict_avg},
+            'peace': {'oil': 70.0, 'conflict': global_conflict_avg * 0.5},
+            'ultimatum': {'oil': live_oil * 1.5, 'conflict': global_conflict_avg * 2.0}
+        }
+        curr = scenarios.get(args.scenario, scenarios['baseline'])
+        print(f"📊 MARKET BASELINE: Brent Oil @ ${curr['oil']:.2f} | Gold @ ${live_gold:.2f}")
+
+    except Exception as e:
+        print(f"⚠️ Market Logic Error: {e}")
 
     # 4. SCENARIO LOGIC
     scenarios = {
