@@ -2,6 +2,7 @@ import os
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import branca.colormap as cm
 from matplotlib.colors import LinearSegmentedColormap
 
 class SofieVisualizer:
@@ -11,10 +12,11 @@ class SofieVisualizer:
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
     def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
-        # --- NEW: CUSTOM TRAFFIC LIGHT COLORMAP ---
-        # 0=Green, 0.4=Yellow, 0.7=Orange, 1.0=Red
-        colors = ["#28A745", "#FFD700", "#FF8C00", "#D00000"] 
-        nodes = [0.0, 0.4, 0.7, 1.0]
+        # --- FIXED: WIDER GREEN BUFFER ---
+        # 0.0 to 0.5 is now the "Green to Lime" zone. 
+        # Yellow only starts appearing after 50%.
+        colors = ["#1B5E20", "#4CAF50", "#CDDC39", "#FFC107", "#D50000"] # Deep Green, Green, Lime, Gold, Red
+        nodes = [0.0, 0.3, 0.5, 0.7, 1.0] 
         sofie_cmap = LinearSegmentedColormap.from_list("sofie_tension", list(zip(nodes, colors)))
 
         # Standard Colors
