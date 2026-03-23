@@ -12,99 +12,91 @@ class SofieVisualizer:
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
     def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
-        # --- FIXED: WIDER GREEN BUFFER ---
-        # 0.0 to 0.5 is now the "Green to Lime" zone. 
-        # Yellow only starts appearing after 50%.
-        colors = ["#1B5E20", "#4CAF50", "#CDDC39", "#FFC107", "#D50000"] # Deep Green, Green, Lime, Gold, Red
-        nodes = [0.0, 0.3, 0.5, 0.7, 1.0] 
-        sofie_cmap = LinearSegmentedColormap.from_list("sofie_tension", list(zip(nodes, colors)))
-
-        # Standard Colors
-        bg_main = '#FFFFFF'
-        bg_panel = '#F8F9FA'
-        text_color = '#212529'
-
-        # 1. Create the Figure
-        fig = plt.figure(figsize=(16, 11), facecolor=bg_main)
+        # Style Settings
+        plt.style.use('dark_background')
+        bg_panel = '#0A0A0A'
+        accent_color = '#00FF41'  # Matrix Green
+        text_color = '#E0E0E0'
         
-        # --- PANEL A: WORLD TENSION HEATMAP ---
-        ax1 = fig.add_axes([0.05, 0.25, 0.70, 0.70])
+        fig = plt.figure(figsize=(24, 14), facecolor='black')
+        
+        # --- PANEL A: GLOBAL RISK MAP (ISO-BASED) ---
+        ax1 = fig.add_axes([0.05, 0.25, 0.90, 0.70])
         try:
-            world = gpd.read_file(self.world_url)
+            import geopandas as gpd
+            # Load map
+            world = gpd.read_file("https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip")
             
-            # Map the risk scores
-            world['tension'] = world['NAME'].map(at_risk).fillna(0)
+            # --- START ISO FIX ---
+            # Most Natural Earth files use 'ADM0_A3' or 'ISO_A3'
+            iso_col = 'ISO_A3' if 'ISO_A3' in world.columns else 'ADM0_A3'
+            
+            # We map the 'at_risk' dictionary (which now contains ISO codes) 
+            # to the map's ISO column.
+            world['tension'] = world[iso_col].map(at_risk).fillna(0)
+            # --- END ISO FIX ---
 
-            # 2. Plot the Tension Layer using our CUSTOM CMAP
-            # vmin/vmax ensures 0 is always Green and 100 is always Red
             world.plot(
-                column='tension', 
-                ax=ax1, 
-                cmap=sofie_cmap, 
-                edgecolor='#495057', 
-                linewidth=0.3,
-                vmin=0, vmax=100,
-                legend=True,
-                legend_kwds={'label': "Tension Level (%)", 'orientation': "horizontal", 'pad': 0.01}
+                column='tension',
+                ax=ax1,
+                cmap='RdYlGn_r', # Red for High Tension, Green for Low
+                linewidth=0.5,
+                edgecolor='0.2',
+                legend=False,
+                missing_kwds={'color': '#1A1A1A'} # Dark gray for countries with no data
             )
-            
         except Exception as e:
-            ax1.text(0.5, 0.5, f"MAP ERROR: {e}", ha='center', color='red')
+            ax1.text(0.5, 0.5, f"MAP SENSOR OFFLINE: {e}", ha='center', color='red')
         
-        ax1.set_title(f"WORLD TENSION MAP | MARCH 2026 NEXUS", 
-                      color=text_color, fontsize=24, pad=20, fontweight='bold')
         ax1.set_axis_off()
+        ax1.set_title(f"SOFIE | QUAD-NEXUS STRATEGIC OVERLAY", color=accent_color, fontsize=28, fontweight='bold', pad=20)
 
-        # --- PANEL B: MARITIME FRICTION NODES (Fixed Scaling) ---
+        # --- PANEL B: MARITIME FRICTION NODES (Fixed & Robust) ---
         ax2 = fig.add_axes([0.05, 0.05, 0.20, 0.15])
         ax2.set_facecolor(bg_panel)
         
-        # Plot the dots
+        # Plotting the ports
         for port, data in friction.items():
-            lon = data.get('lon', 0)
-            lat = data.get('lat', 0)
-            f_val = data.get('friction', 1.0)
-            
-            color = '#DC3545' if f_val > 1.2 else '#28A745'
-            ax2.scatter(lon, lat, s=150, c=color, edgecolors='white', zorder=3)
-            ax2.text(lon + 2, lat, port.upper()[:10], fontsize=8, fontweight='bold')
-        
-        # CRITICAL: Set the limits to show the whole world map in this small box
-        ax2.set_xlim(-180, 180)
-        ax2.set_ylim(-60, 80)
-        ax2.set_axis_off() # Keeps it clean
-        ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=16, fontweight='bold')
+            try:
+                lon, lat = float(data.get('lon', 0)), float(data.get('lat', 0))
+                f_val = float(data.get('friction', 1.0))
+                
+                # Determine color based on friction level
+                p_color = '#DC3545' if f_val > 1.2 else '#28A745'
+                ax2.scatter(lon, lat, s=120, c=p_color, edgecolors='white', zorder=5)
+                
+                if f_val > 1.1: # Only label friction points
+                    ax2.text(lon + 3, lat, port.upper()[:10], fontsize=8, color=text_color, fontweight='bold')
+            except:
+                continue
 
-        # --- PANEL C: STABILITY INDEX GAUGE ---
-        ax3 = fig.add_axes([0.30, 0.05, 0.45, 0.15])
+        ax2.set_xlim(-180, 180) # Force global scaling
+        ax2.set_ylim(-60, 85)
+        ax2.set_axis_off()
+        ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=14, fontweight='bold')
+
+        # --- PANEL C: STABILITY GAUGE ---
+        ax3 = fig.add_axes([0.30, 0.05, 0.30, 0.15])
         ax3.set_facecolor(bg_panel)
-        color_gauge = '#28A745' if score < 40 else '#FFC107' if score < 70 else '#DC3545'
-        ax3.barh(["STABILITY"], [100], color='#E9ECEF', height=0.4)
-        ax3.barh(["STABILITY"], [score], color=color_gauge, height=0.4)
-        ax3.text(score + 2, 0, f"{score}%", color=color_gauge, fontsize=32, fontweight='bold', va='center')
-        ax3.set_title("GLOBAL FRAGILITY INDEX", color=text_color, fontsize=16, fontweight='bold')
-        ax3.set_xlim(0, 115)
-        ax3.get_yaxis().set_visible(False)
+        # Create a simple gauge bar
+        ax3.barh(0, 100, color='#1A1A1A', height=0.4)
+        ax3.barh(0, score, color=accent_color, height=0.4)
+        ax3.text(50, 0, f"{score:.2f}%", ha='center', va='center', fontsize=30, color='black', fontweight='bold')
+        ax3.set_axis_off()
+        ax3.set_title("SYSTEM STABILITY INDEX", color=text_color, fontsize=14, fontweight='bold')
 
-        # --- PANEL D: LIVE PORT ALERTS (Sidebar) ---
-        ax4 = fig.add_axes([0.78, 0.05, 0.18, 0.90])
+        # --- PANEL D: LIVE ALERTS ---
+        ax4 = fig.add_axes([0.65, 0.05, 0.30, 0.15])
         ax4.set_facecolor(bg_panel)
-        ax4.set_xticks([]); ax4.set_yticks([])
-        ax4.set_title("LIVE PORT ALERTS", color=text_color, fontsize=14, fontweight='bold', pad=15)
+        y_pos = 0.8
+        ax4.text(0.05, 0.9, "ACTIVE STRATEGIC ALERTS:", color=accent_color, fontsize=12, fontweight='bold')
+        for alert in alerts[:4]:
+            ax4.text(0.05, y_pos, f"> {alert[:50]}...", color=text_color, fontsize=10, family='monospace')
+            y_pos -= 0.2
+        ax4.set_axis_off()
 
-        y_pos = 0.95
-        risk_keywords = ['threat', 'crisis', 'conflict', 'war', 'strike', 'delay', 'attack', 'blocked']
-        for alert in alerts[:12]:
-            title_text = alert.get('title', 'No Title')
-            clean_title = (title_text[:50] + '..') if len(title_text) > 50 else title_text
-            t_color = '#D00000' if any(w in clean_title.lower() for w in risk_keywords) else '#495057'
-            ax4.text(0.05, y_pos, f"• {clean_title}", transform=ax4.transAxes, fontsize=9, 
-                     color=t_color, fontweight='bold', va='top', wrap=True)
-            y_pos -= 0.075
-
-        # --- FINAL EXPORT ---
-        filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
-        save_path = os.path.join(self.output_path, filename)
-        plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor=bg_main)
+        # Save output
+        save_path = f"Data/exports/COMMAND_SITREP_{suffix}.png"
+        plt.savefig(save_path, facecolor='black', edgecolor='none', dpi=100)
         plt.close()
-        print(f"✅ SITREP EXPORTED TO: {save_path}")
+        return save_path
