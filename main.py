@@ -8,6 +8,9 @@ from gdeltdoc import GdeltDoc, Filters
 # Import custom intelligence modules
 from src.utils.visualizer import SofieVisualizer
 from src.utils.data_processor import SofieDataEngine
+from src.utils.migration_engine import MigrationEngine
+mig_engine = MigrationEngine()
+displacement_map = mig_engine.get_displacement_risk()
 
 def fetch_live_world_tension():
     """Optimized live feed for broader news capture."""
@@ -162,26 +165,42 @@ def main():
 
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
-        def calculate_nexus(row):
-            country = str(row[c_col])
-            iso3 = row.get('ISO', 'GLOBAL')
-            current = row.get('CONFLICT_INDEX', 50)
-            hist_avg = baseline_map.get(country, 0.0)
-            hist_tension = max(0, ((hist_avg - 10) / -20) * 100)
-            sentiment = gpr_map.get(iso3, latest_gpr_row['GPR'] / 2.0)
-            sentiment_n = min(sentiment * 60, 100)
-            hazard_score = hazard_map.get(iso3, 10.0)
+        def calculate_nexus(row, displacement_map):
+    """
+    Calculates the 2026 Quad-Nexus Score by balancing:
+    1. Hazard Index (ACLED Conflict Data) - 40%
+    2. Sentiment Score (Market/News Tone) - 30%
+    3. Displacement Pressure (Refugee/IDP Flows) - 30%
+    """
 
-            score = (current * 0.40) + (hist_tension * 0.20) + (sentiment_n * 0.20) + (hazard_score * 0.20)
-            return min(100, (score ** 1.1))
+    # 1. Conflict Pillar (0.0 to 1.0)
+    # ACLED Hazard Index usually ranges 0-1
+    hazard = float(row.get('HAZARD_INDEX', 0))
 
-        current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_nexus, axis=1)
-        global_conflict_avg = current_risks['NEXUS_SCORE'].mean()
-        tension_map_data = current_risks[current_risks['ISO'] != 'GLOBAL'].set_index('ISO')['NEXUS_SCORE'].to_dict()
+    # 2. Sentiment Pillar (0.0 to 1.0)
+    # We take the absolute value because both extreme negative (-1)
+    # and extreme positive (+1) indicate high volatility/intensity.
+    sentiment = abs(float(row.get('SENTIMENT_SCORE', 0)))
 
-        print(f"🌍 QUAD-NEXUS ONLINE: Global Intensity at {global_conflict_avg:.2f}%")
-    except Exception as e:
-        print(f"⚠ Nexus Integration Error: {e}")
+    # 3. Humanitarian Pillar (0.0 to 1.0)
+    # We look up the country's displacement score from our migration data.
+    # 'COUNTRY' is the name, but if you used the ISO fix, use row.get('ISO')
+    country_key = row.get('COUNTRY', 'Global')
+    displacement = float(displacement_map.get(country_key, 0))
+
+    # --- WEIGHTED CALCULATION ---
+    # Weight distribution: 0.4 Hazard + 0.3 Sentiment + 0.3 Displacement
+    nexus_base = (hazard * 0.4) + (sentiment * 0.3) + (displacement * 0.3)
+
+    # Scale to a percentage (0-100)
+    nexus_score = nexus_base * 100
+
+    # Add a 'Force Multiplier': If both Conflict and Displacement are high (>0.7),
+    # it indicates a systemic collapse. We boost the score by 10%.
+    if hazard > 0.7 and displacement > 0.7:
+        nexus_score = min(100, nexus_score * 1.1)
+
+    return round(nexus_score, 2)
 
     # 4. SCENARIO LOGIC (Market Driven by gpr_master_pro.csv)
     try:
