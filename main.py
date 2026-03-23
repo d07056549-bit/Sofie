@@ -96,24 +96,42 @@ def main():
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
+        # D. LOAD HAZARD DATA (EM-DAT)
+        hazard_path = r"Data/raw/Hazards/Global Hazard & Disaster Risk Data/_EmergencyEventsDatabase-CountryProfiles_emdat-country-profiles_2023_04_06.csv"
+        # Note: This file uses a semicolon (;) as a separator
+        hazard_df = pd.read_csv(hazard_path, sep=';')
+
+        # We'll use the most recent full year (2023) to create a 'Hazard Intensity'
+        recent_hazards = hazard_df[hazard_df['Year'] == 2023].copy()
+        
+        # Create a hazard map based on 'Total Events' (normalized 0-100)
+        # We multiply by 10 because most countries have 1-5 events per year
+        hazard_map = (recent_hazards.groupby('ISO')['Total Events'].sum() * 10).clip(0, 100).to_dict()
         # --- THE TRINITY CALCULATION ---
+        
         def calculate_nexus(row):
             country = str(row[c_col])
+            iso3 = row.get('ISO', 'GLOBAL')
+            
             # 1. ACLED (Current Violence): 0-100
             current = row.get('CONFLICT_INDEX', 50)
             
-            # 2. GDELT (Historical Average): Normalized to 0-100
+            # 2. GDELT (History): 0-100
             hist_avg = baseline_map.get(country, 0.0)
-            hist_tension = ((hist_avg - 10) / -20) * 100
+            hist_tension = max(0, ((hist_avg - 10) / -20) * 100)
             
-            # 3. GPR (Strategic Sentiment): Normalized to 0-100 (using max share as 5.0)
-            # Note: We use a simple ISO3 approximation or default to global GPR
-            iso3_code = row.get('ISO', 'GLOBAL') # Ensure your ACLED file has an ISO column
-            sentiment = gpr_map.get(iso3_code, latest_gpr_row['GPR'] / 2.0)
-            sentiment_n = min(sentiment * 20, 100) # Scaling factor
+            # 3. GPR (Strategic Sentiment): 0-100
+            sentiment = gpr_map.get(iso3, latest_gpr_row['GPR'] / 2.0)
+            sentiment_n = min(sentiment * 60, 100) 
+            
+            # 4. NEW: EM-DAT (Hazard Risk): 0-100
+            hazard_score = hazard_map.get(iso3, 10.0) # Default to 10 if no data
 
-            # WEIGHTED BLEND: 50% Current, 25% History, 25% Sentiment
-            return (current * 0.50) + (hist_tension * 0.25) + (sentiment_n * 0.25)
+            # UPDATED WEIGHTED BLEND: 40% Violence, 20% History, 20% News, 20% Hazards
+            score = (current * 0.40) + (hist_tension * 0.20) + (sentiment_n * 0.20) + (hazard_score * 0.20)
+            
+            # Contrast curve for the visualizer
+            return min(100, (score ** 1.1))
 
         current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_nexus, axis=1)
         
