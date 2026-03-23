@@ -1,61 +1,61 @@
-import matplotlib.pyplot as plt
 import os
 import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.colors import LinearSegmentedColormap
 
 class SofieVisualizer:
     def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
-        # The new stable URL we just found:
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
     def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
-        import matplotlib.pyplot as plt
-        import geopandas as gpd
-        import os
+        # --- NEW: CUSTOM TRAFFIC LIGHT COLORMAP ---
+        # 0=Green, 0.4=Yellow, 0.7=Orange, 1.0=Red
+        colors = ["#28A745", "#FFD700", "#FF8C00", "#D00000"] 
+        nodes = [0.0, 0.4, 0.7, 1.0]
+        sofie_cmap = LinearSegmentedColormap.from_list("sofie_tension", list(zip(nodes, colors)))
 
-        # Standard Colors for Light Mode
+        # Standard Colors
         bg_main = '#FFFFFF'
         bg_panel = '#F8F9FA'
         text_color = '#212529'
 
         # 1. Create the Figure
-        fig = plt.figure(figsize=(16, 11), facecolor='#121212')
+        fig = plt.figure(figsize=(16, 11), facecolor=bg_main)
         
-        # --- PANEL A: WORLD TENSION HEATMAP (Top/Center) ---
+        # --- PANEL A: WORLD TENSION HEATMAP ---
         ax1 = fig.add_axes([0.05, 0.25, 0.70, 0.70])
         try:
             world = gpd.read_file(self.world_url)
             
-            # 1. Map the risk scores to the GeoDataFrame
-            # We assume 'at_risk' is a dictionary: {'Sudan': 85.2, 'Ukraine': 92.0...}
+            # Map the risk scores
             world['tension'] = world['NAME'].map(at_risk).fillna(0)
 
-            # 2. Plot the Base Map (Grey for zero tension)
-            world[world['tension'] == 0].plot(ax=ax1, color='#DEE2E6', edgecolor='#ADB5BD', linewidth=0.5)
-            
-            # 3. Plot the Tension Layer (Choropleth)
-            # This creates the "Heatmap" look using the 'OrRd' (Orange-Red) scale
-            world[world['tension'] > 0].plot(
+            # 2. Plot the Tension Layer using our CUSTOM CMAP
+            # vmin/vmax ensures 0 is always Green and 100 is always Red
+            world.plot(
                 column='tension', 
                 ax=ax1, 
-                cmap='OrRd', 
-                edgecolor='#8B0000', 
-                linewidth=0.5,
-                vmin=0, vmax=100  # Sets the scale from 0 to 100%
+                cmap=sofie_cmap, 
+                edgecolor='#495057', 
+                linewidth=0.3,
+                vmin=0, vmax=100,
+                legend=True,
+                legend_kwds={'label': "Tension Level (%)", 'orientation': "horizontal", 'pad': 0.01}
             )
             
         except Exception as e:
             ax1.text(0.5, 0.5, f"MAP ERROR: {e}", ha='center', color='red')
         
-        ax1.set_title(f"WORLD TENSION MAP | MARCH 2026 NEXUS {suffix.upper()}", 
-                      color='#212529', fontsize=24, pad=20, fontweight='bold')
+        ax1.set_title(f"WORLD TENSION MAP | MARCH 2026 NEXUS", 
+                      color=text_color, fontsize=24, pad=20, fontweight='bold')
         ax1.set_axis_off()
 
-        # --- PANEL B: MARITIME FRICTION NODES (Bottom Left) ---
+        # --- PANEL B: MARITIME FRICTION NODES ---
         ax2 = fig.add_axes([0.05, 0.05, 0.20, 0.15])
         ax2.set_facecolor(bg_panel)
-        # Draw the ports from your CSV data
         for port, data in friction.items():
             f_val = data.get('friction', 1.0)
             color = '#DC3545' if f_val > 1.2 else '#28A745'
@@ -63,9 +63,8 @@ class SofieVisualizer:
             ax2.text(data.get('lon', 0)+1, data.get('lat', 0), port.upper()[:10], fontsize=8)
         
         ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=16, fontweight='bold')
-        ax2.grid(color='#CED4DA', alpha=0.3)
 
-        # --- PANEL C: STABILITY INDEX GAUGE (Bottom Center) ---
+        # --- PANEL C: STABILITY INDEX GAUGE ---
         ax3 = fig.add_axes([0.30, 0.05, 0.45, 0.15])
         ax3.set_facecolor(bg_panel)
         color_gauge = '#28A745' if score < 40 else '#FFC107' if score < 70 else '#DC3545'
@@ -78,43 +77,23 @@ class SofieVisualizer:
 
         # --- PANEL D: LIVE PORT ALERTS (Sidebar) ---
         ax4 = fig.add_axes([0.78, 0.05, 0.18, 0.90])
-        ax4.set_facecolor('#F8F9FA') # Clean light grey
-        ax4.set_xticks([])
-        ax4.set_yticks([])
-        ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold', pad=15)
+        ax4.set_facecolor(bg_panel)
+        ax4.set_xticks([]); ax4.set_yticks([])
+        ax4.set_title("LIVE PORT ALERTS", color=text_color, fontsize=14, fontweight='bold', pad=15)
 
         y_pos = 0.95
         risk_keywords = ['threat', 'crisis', 'conflict', 'war', 'strike', 'delay', 'attack', 'blocked']
-        
-        # This loop is where the magic happens
-        for alert in alerts[:10]: # Draw up to 10 alerts
-            title_text = alert.get('title', 'No Title Available')
-            clean_title = (title_text[:55] + '..') if len(title_text) > 55 else title_text
-            
-            # Sentiment Color Logic
-            text_color = '#495057' # Default dark grey
-            if any(word in clean_title.lower() for word in risk_keywords):
-                text_color = '#D00000' # High Alert Red
-
-            # DRAWING THE TEXT
-            ax4.text(0.05, y_pos, f"• {clean_title}", 
-                    transform=ax4.transAxes, 
-                    fontsize=9, 
-                    color=text_color, 
-                    fontweight='bold',
-                    va='top', 
-                    ha='left',
-                    wrap=True)
-            
-            y_pos -= 0.09
-            
-        ax4.get_xaxis().set_visible(False)
-        ax4.get_yaxis().set_visible(False)
+        for alert in alerts[:12]:
+            title_text = alert.get('title', 'No Title')
+            clean_title = (title_text[:50] + '..') if len(title_text) > 50 else title_text
+            t_color = '#D00000' if any(w in clean_title.lower() for w in risk_keywords) else '#495057'
+            ax4.text(0.05, y_pos, f"• {clean_title}", transform=ax4.transAxes, fontsize=9, 
+                     color=t_color, fontweight='bold', va='top', wrap=True)
+            y_pos -= 0.075
 
         # --- FINAL EXPORT ---
         filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
         save_path = os.path.join(self.output_path, filename)
         plt.savefig(save_path, dpi=150, bbox_inches='tight', facecolor=bg_main)
         plt.close()
-        
         print(f"✅ SITREP EXPORTED TO: {save_path}")
