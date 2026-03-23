@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import geopandas as gpd
 
 class LogisticsMapper:
     def __init__(self, output_path="exports/"):
