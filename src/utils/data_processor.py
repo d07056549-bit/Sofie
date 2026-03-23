@@ -4,6 +4,10 @@ import pandas as pd
 class SofieDataEngine:
     def __init__(self, root_dir="Data/raw"):
         self.root_dir = root_dir
+        self.paths = {
+        "maritime": os.path.join(self.root, "Data", "Maritime Port Performance Project Dataset.csv")
+    }
+    
     def get_live_port_alerts(self):
         """
         Scrapes maritime news feeds for real-time port congestion.
