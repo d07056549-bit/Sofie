@@ -22,40 +22,46 @@ def run_ucdp_processing():
     
     for file in files:
         try:
-            # 1. Load data
+            # 1. Load data without the invalid 'errors' keyword
             if file.endswith('.csv'):
-                df = pd.read_csv(file, low_memory=False, encoding='utf-8', errors='replace')
+                # Using encoding_errors for newer pandas, or standard fallback
+                df = pd.read_csv(file, low_memory=False, encoding='utf-8', encoding_errors='replace')
             else:
                 df = pd.read_excel(file)
             
             # 2. Flexible column mapping
-            col_map = {c.lower(): c for c in df.columns}
+            df.columns = [c.lower() for c in df.columns]
+            col_list = list(df.columns)
             
             # Find YEAR
-            year_col = next((col_map[k] for k in ['year', 'year_id', 'active_year'] if k in col_map), None)
+            year_col = next((k for k in ['year', 'year_id', 'active_year'] if k in col_list), None)
             # Find COUNTRY
-            country_col = next((col_map[k] for k in ['country', 'country_name', 'location', 'side_a'] if k in col_map), None)
-            # Find FATALITIES (UCDP 'best' is the standard)
-            fatality_col = next((col_map[k] for k in ['best', 'deaths_total', 'fatality_count', 'best_fatality_estimate'] if k in col_map), None)
+            country_col = next((k for k in ['country', 'country_name', 'location', 'side_a'] if k in col_list), None)
+            # Find FATALITIES
+            fatality_col = next((k for k in ['best', 'deaths_total', 'fatality_count', 'best_fatality_estimate'] if k in col_list), None)
 
             if year_col and country_col and fatality_col:
                 # Standardize to simulation window (2024+)
                 df[year_col] = pd.to_numeric(df[year_col], errors='coerce')
+                # We include 2024 as the "Current State" baseline for the 2026 sim
                 df = df[df[year_col] >= 2024].copy()
                 
                 if df.empty:
-                    print(f"  - Ingested {os.path.basename(file)}: No data for 2024-2026.")
+                    print(f"  - {os.path.basename(file)}: No data found for 2024-2026.")
                     continue
 
                 # Group and rename to avoid collisions
                 summary = df.groupby([country_col, year_col])[fatality_col].sum().to_frame()
-                summary.columns = [f"fatalities_{os.path.basename(file)[:10]}"]
+                
+                # Create a clean column name based on the file type
+                clean_name = os.path.basename(file).split('_')[0].lower()
+                summary.columns = [f"ucdp_{clean_name}_fatalities"]
                 summary.index.names = ['country', 'year']
                 
                 df_list.append(summary)
                 print(f"  + Ingested {os.path.basename(file)}: Found {len(summary)} records.")
             else:
-                print(f"  - Skipping {os.path.basename(file)}: Missing critical columns (Found: {list(df.columns)[:5]}...)")
+                print(f"  - Skipping {os.path.basename(file)}: Missing columns. (Found: {col_list[:3]})")
 
         except Exception as e:
             print(f"  - Error processing {os.path.basename(file)}: {e}")
@@ -65,17 +71,18 @@ def run_ucdp_processing():
         return
 
     # 3. Merge and calculate
-    # Outer join to capture all countries across all files
     ucdp_master = pd.concat(df_list, axis=1).fillna(0)
     
-    # Sum all the different fatality columns into one total
-    ucdp_master['total_fatalities'] = ucdp_master.sum(axis=1)
+    # Calculate Total Fatalities across all UCDP sources
+    fatality_cols = [c for c in ucdp_master.columns if 'fatalities' in c]
+    ucdp_master['total_fatalities'] = ucdp_master[fatality_cols].sum(axis=1)
     
-    # Calculate Risk Index using the global max as the ceiling
-    max_f = ucdp_master['total_fatalities'].max()
+    # Calculate Risk Index (normalized 0-100)
+    # We use .max().max() or similar to ensure we get a scalar number
+    global_max = ucdp_master['total_fatalities'].max()
     
-    if max_f > 0:
-        ucdp_master['ucdp_risk_index'] = (ucdp_master['total_fatalities'] / max_f * 100).round(2)
+    if global_max > 0:
+        ucdp_master['ucdp_risk_index'] = (ucdp_master['total_fatalities'] / global_max * 100).round(2)
     else:
         ucdp_master['ucdp_risk_index'] = 0.0
 
