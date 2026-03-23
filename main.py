@@ -73,41 +73,44 @@ def main():
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. GEOPOLITICAL CONSENSUS (Nexus: History + Live)
-    # --- Initialize Defaults to prevent UnboundLocalError ---
-    world_tension = 2.18 # Your last known stable baseline
-    tension_map_data = {} 
-    
-    # Try fetching Live Feed
-    live_tension = fetch_live_world_tension()
-    
+    # 3. GEOPOLITICAL NEXUS (Deep Memory + Live Analysis)
     try:
-        # Load CSV History (The "Memory")
+        # A. Load your massive 90M-row historical baseline
+        baseline_path = "Data/processed/gdelt_historical_baseline.csv"
+        baseline_df = pd.read_csv(baseline_path, index_col=0)
+        baseline_map = baseline_df['GoldsteinScale'].to_dict()
+
+        # B. Load your 2026 ACLED Conflict Data
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
         
-        # 1. Calculate Historical Tension (Top 10 Hotspots)
-        latest_year = acled_df['YEAR'].max()
-        hist_latest = acled_df[acled_df['YEAR'] == latest_year]
-        hist_score = hist_latest['CONFLICT_INDEX'].nlargest(10).mean()
-
-        # 2. Blend Logic: 60% History / 40% Live
-        if live_tension is not None:
-            world_tension = (hist_score * 0.6) + (live_tension * 0.4)
-            print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Nexus Blend: {live_tension}% Live / {hist_score:.1f}% Hist)")
-        else:
-            world_tension = hist_score
-            print(f"🌍 WORLD TENSION: {world_tension:.2f}% (Historical Mode Only)")
-
-        # 3. Prep Map Data (Always use CSV for the geography)
-        tension_map_data = hist_latest.set_index('COUNTRY')['CONFLICT_INDEX'].to_dict()
-        global_conflict_avg = world_tension
+        # C. CALCULATION: Identify Anomalies (Current vs. Historical)
+        # Logic: If Current Conflict > Historical Average, Tension spikes.
+        current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
         
+        def calculate_anomaly(row):
+            country = row['COUNTRY_CODE'] # Ensure this matches your ACLED column
+            current_score = row['CONFLICT_INDEX']
+            # Get historical average (Default to 0.0 if country not found)
+            hist_avg = baseline_map.get(country, 0.0)
+            
+            # Convert Goldstein (-10 to 10) to a 0-100 scale (100 = War)
+            hist_tension = ((hist_avg - 10) / -20) * 100
+            
+            # Return weighted average: 70% Current, 30% Historical Context
+            return (current_score * 0.7) + (hist_tension * 0.3)
+
+        current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_anomaly, axis=1)
+        
+        # Final Global Average for the Dashboard
+        global_conflict_avg = current_risks['NEXUS_SCORE'].mean()
+        tension_map_data = current_risks.set_index('COUNTRY')['NEXUS_SCORE'].to_dict()
+
+        print(f"🌍 NEXUS INTEGRATION COMPLETE: Global Intensity at {global_conflict_avg:.2f}%")
+
     except Exception as e:
-        print(f"⚠️ Geopolitical Engine Error: {e}")
-        # Final safety fallback
-        global_conflict_avg = 23.79 
-        tension_map_data = {}
+        print(f"⚠️ Nexus Integration Error: {e}")
+        global_conflict_avg = 28.5  # Realistic fallback
 
     # 4. SCENARIO LOGIC
     scenarios = {
