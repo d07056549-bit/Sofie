@@ -9,57 +9,58 @@ class SofieVisualizer:
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
 
     def generate_unified_intel(self, score, at_risk, friction, suffix=""):
-        # 1. Setup the Master Canvas (Gunmetal Grey instead of pure black)
-        master_bg = '#212529'
-        panel_bg = '#343a40'
+        # 1. Setup the Master Canvas (Pure White)
+        bg_main = '#FFFFFF'
+        bg_panel = '#F8F9FA' # Very light grey for panel separation
+        text_color = '#212529' # Dark slate for text
         
-        fig = plt.figure(figsize=(20, 12), facecolor=master_bg)
+        fig = plt.figure(figsize=(20, 12), facecolor=bg_main)
         gs = fig.add_gridspec(2, 2, height_ratios=[1.2, 1])
         
         # --- PANEL A: GEOPOLITICAL RISK MAP (Top Span) ---
         ax1 = fig.add_subplot(gs[0, :])
-        ax1.set_facecolor(master_bg) # Sync map background to master
+        ax1.set_facecolor(bg_main)
         
         world = gpd.read_file(self.world_url)
-        # Use lighter, higher-contrast land and borders
-        world.plot(ax=ax1, color='#495057', edgecolor='#ADB5BD') 
-        world[world['NAME'].isin(at_risk)].plot(ax=ax1, color='#FF4B4B', alpha=0.9) # Saturated red
+        # Professional Slate/Grey map palette
+        world.plot(ax=ax1, color='#DEE2E6', edgecolor='#6C757D', linewidth=0.5) 
+        world[world['NAME'].isin(at_risk)].plot(ax=ax1, color='#DC3545', alpha=0.8) # Strong Crimson
         
-        # 'Loc=center' and bigger padding for the title
         ax1.set_title(f"TOP-LEVEL GEOPOLITICAL RISK | MARCH 23 NEXUS {suffix}", 
-                      color='white', fontsize=20, pad=30, fontweight='bold', loc='center')
+                      color=text_color, fontsize=22, pad=30, fontweight='bold')
         ax1.set_axis_off()
 
         # --- PANEL B: LOGISTICS FRICTION HEATMAP (Bottom Left) ---
         ax2 = fig.add_subplot(gs[1, 0])
-        ax2.set_facecolor(panel_bg)
+        ax2.set_facecolor(bg_panel)
         for port, data in friction.items():
-            color = '#FF4B4B' if data.get('friction', 0) > 3.0 else '#00E676'
+            color = '#DC3545' if data.get('friction', 0) > 3.0 else '#28A745'
             ax2.scatter(data.get('lon', 0), data.get('lat', 0), s=200, c=color, edgecolors='white', zorder=3)
-            # Use white text for labels
             ax2.text(data.get('lon', 0)+2, data.get('lat', 0), port.upper(), 
-                     color='white', fontsize=8, fontweight='bold')
-        ax2.set_title("MARITIME FRICTION NODES", color='white', fontsize=14, pad=15)
-        ax2.grid(color='#ADB5BD', alpha=0.1) # Lighter grid lines
-        ax2.tick_params(axis='both', colors='white') # White axis numbers
+                     color=text_color, fontsize=9, fontweight='semibold')
+        
+        ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=16, pad=15)
+        ax2.grid(color='#CED4DA', alpha=0.3)
+        ax2.tick_params(axis='both', colors='#495057')
 
         # --- PANEL C: STABILITY INDEX GAUGE (Bottom Right) ---
         ax3 = fig.add_subplot(gs[1, 1])
-        ax3.set_facecolor(panel_bg)
-        color_gauge = '#00E676' if score < 40 else '#FFD600' if score < 70 else '#FF4B4B'
+        ax3.set_facecolor(bg_panel)
+        color_gauge = '#28A745' if score < 40 else '#FFC107' if score < 70 else '#DC3545'
         
-        # Simple Bar Gauge
-        ax3.barh(["STABILITY"], [100], color='#212529', height=0.4)
+        # Stability Bar
+        ax3.barh(["STABILITY"], [100], color='#E9ECEF', height=0.4)
         ax3.barh(["STABILITY"], [score], color=color_gauge, height=0.4)
-        ax3.text(score + 2, 0, f"{score}%", color=color_gauge, fontsize=32, fontweight='bold', va='center')
+        ax3.text(score + 2, 0, f"{score}%", color=color_gauge, fontsize=36, fontweight='bold', va='center')
+        
         ax3.set_xlim(0, 110)
-        ax3.set_title("GLOBAL FRAGILITY INDEX", color='white', fontsize=14, pad=15)
+        ax3.set_title("GLOBAL FRAGILITY INDEX", color=text_color, fontsize=16, pad=15)
         ax3.get_yaxis().set_visible(False)
-        ax3.tick_params(axis='x', colors='white') # White numbers on bottom
+        ax3.tick_params(axis='x', colors='#495057')
 
         # 2. Final Export
-        plt.tight_layout(pad=6.0) # Increased padding between panels
+        plt.tight_layout(pad=6.0)
         filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
-        plt.savefig(os.path.join(self.output_path, filename), facecolor=master_bg, dpi=150)
+        plt.savefig(os.path.join(self.output_path, filename), facecolor=bg_main, dpi=150)
         plt.close()
-        print(f"-> HIGH-CONTRAST SITREP EXPORTED: {filename}")
+        print(f"-> LIGHT MODE SITREP EXPORTED: {filename}")
