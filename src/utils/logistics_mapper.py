@@ -2,8 +2,8 @@ import os
 import matplotlib.pyplot as plt
 
 class LogisticsMapper:
-    def __init__(self, output_path="exports/"):
-        self.output_path = os.path.abspath(output_path)
+    def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
+        self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
 
     def generate_heatmap(self, friction_data, suffix=""):
