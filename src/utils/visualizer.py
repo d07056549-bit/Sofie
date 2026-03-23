@@ -1,12 +1,11 @@
-import os
 import matplotlib.pyplot as plt
-import geopandas as gpd
-
+import os
 class SofieVisualizer:
     def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
-        self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
+        # The new stable URL we just found:
+        self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
         import matplotlib.pyplot as plt
@@ -26,23 +25,28 @@ class SofieVisualizer:
         ax2.set_title("TOP RISK ENTITIES", fontweight='bold')
         # ... (risk list code follows) ...
 
-      # --- PANEL C: The Map (Center/Right) ---
-        ax3 = fig.add_axes([0.35, 0.1, 0.45, 0.85])
-        # ... (map code follows) ...
+      # 2. Load the Map (Panel C)
+        try:
+            # This uses the stable S3 Amazon link we just swapped
+            world = gpd.read_file(self.world_url)
+            ax3 = fig.add_axes([0.35, 0.1, 0.45, 0.85])
+            world.plot(ax=ax3, color='#E9ECEF', edgecolor='#DEE2E6')
+            ax3.set_axis_off()
+        except Exception as e:
+            print(f"⚠️ Map Download Failed: {e}. Drawing blank theater.")
+            ax3 = fig.add_axes([0.35, 0.1, 0.45, 0.85])
+            ax3.set_title("GEOSPATIAL LAYER: OFFLINE")
 
-      # --- PANEL D: LIVE PORT ALERTS (The Sidebar) ---
+      # --- PANEL D: LIVE PORT ALERTS (Sidebar) ---
         ax4 = fig.add_axes([0.82, 0.1, 0.15, 0.8]) 
         ax4.set_facecolor('#F8F9FA')
-        ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold')
-        # ... (alert loop code follows) ...
+        ax4.set_title("LIVE PORT ALERTS", fontsize=14, fontweight='bold', pad=20)
         
         y_pos = 0.9
-        for alert in alerts:
-            ax4.text(0.05, y_pos, f"• {alert['title'][:30]}", 
-                     transform=ax4.transAxes, color='#DC3545', fontsize=9, fontweight='bold')
-            ax4.text(0.05, y_pos-0.05, f"{alert['summary'][:50]}", 
-                     transform=ax4.transAxes, color='#495057', fontsize=8)
-            y_pos -= 0.15
+        for alert in alerts[:6]: # Show top 6 news items
+            ax4.text(0.05, y_pos, f"• {alert['title'][:40]}...", 
+                    transform=ax4.transAxes, fontsize=9, verticalalignment='top', wrap=True)
+            y_pos -= 0.12
             
         ax4.get_xaxis().set_visible(False)
         ax4.get_yaxis().set_visible(False)
@@ -91,7 +95,7 @@ class SofieVisualizer:
         # 2. Final Export
         filename = f"COMMAND_SITREP_MARCH_23_{suffix}.png"
         save_path = os.path.join(self.output_path, filename)
-        plt.savefig(save_path, facecolor='#FFFFFF', dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(self.output_path, filename), dpi=150, bbox_inches='tight')
         plt.close()
         
         print(f"-> LIGHT MODE SITREP EXPORTED: {filename}")
