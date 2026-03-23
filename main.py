@@ -73,86 +73,58 @@ def main():
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. GEOPOLITICAL NEXUS (The "Trinity": ACLED + GDELT + GPR)
+    # 3. GEOPOLITICAL NEXUS (The "Quad-Risk": ACLED + GDELT + GPR + EM-DAT)
     global_conflict_avg = 28.5 
     tension_map_data = {}      
 
     try:
-        # A. LOAD HISTORICAL MEMORY (GDELT - 90M Rows)
+        # A. LOAD HISTORICAL MEMORY (GDELT)
         baseline_path = "Data/processed/gdelt_historical_baseline.csv"
         baseline_df = pd.read_csv(baseline_path, index_col=0)
         baseline_map = baseline_df.iloc[:, 0].to_dict()
 
-        # B. LOAD RECENT SENTIMENT (Caldara & Iacoviello GPR)
+        # B. LOAD RECENT SENTIMENT (GPR)
         gpr_path = r"Data/raw/Events/Geopolitical Risk/data_gpr_export.csv"
         gpr_df = pd.read_csv(gpr_path)
         latest_gpr_row = gpr_df.iloc[-1]
-        # Mapping ISO3 (ARG, CHN) to a normalized 0-100 score
         gpr_map = {col.replace('GPRC_', ''): latest_gpr_row[col] for col in gpr_df.columns if col.startswith('GPRC_')}
 
-        # C. LOAD LIVE EVENTS (ACLED 2026)
+        # C. LOAD HAZARD DATA (EM-DAT)
+        hazard_path = r"Data/raw/Hazards/Global Hazard & Disaster Risk Data/_EmergencyEventsDatabase-CountryProfiles_emdat-country-profiles_2023_04_06.csv"
+        hazard_df = pd.read_csv(hazard_path, sep=';')
+        recent_hazards = hazard_df[hazard_df['Year'] == 2023].copy()
+        hazard_map = (recent_hazards.groupby('ISO')['Total Events'].sum() * 10).clip(0, 100).to_dict()
+
+        # --- ISO FIX DICTIONARY (Place it here, inside the try block) ---
+        iso_fix = {
+            'TUR': 'Turkey', 'SYR': 'Syria', 'PHL': 'Philippines',
+            'USA': 'United States of America', 'RUS': 'Russia', 'CHN': 'China'
+        }
+
+        # D. LOAD LIVE EVENTS (ACLED 2026)
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
         c_col = 'COUNTRY' if 'COUNTRY' in acled_df.columns else acled_df.columns[0]
         current_risks = acled_df[acled_df['YEAR'] == 2026].copy()
 
-        # D. LOAD HAZARD DATA (EM-DAT)
-        hazard_path = r"Data/raw/Hazards/Global Hazard & Disaster Risk Data/_EmergencyEventsDatabase-CountryProfiles_emdat-country-profiles_2023_04_06.csv"
-        # Note: This file uses a semicolon (;) as a separator
-        hazard_df = pd.read_csv(hazard_path, sep=';')
-
-        # Add this inside your Hazard loading block to sync EM-DAT with your Map
-iso_fix = {
-    'TUR': 'Turkey', 
-    'SYR': 'Syria',
-    'PHL': 'Philippines',
-    'USA': 'United States of America',
-    'RUS': 'Russia',
-    'CHN': 'China'
-}
-
-# When you create your hazard_map, you can map it back to names if your map uses names:
-hazard_map_names = {iso_fix.get(iso, iso): val for iso, val in hazard_map.items()}
-
-        # We'll use the most recent full year (2023) to create a 'Hazard Intensity'
-        recent_hazards = hazard_df[hazard_df['Year'] == 2023].copy()
-        
-        # Create a hazard map based on 'Total Events' (normalized 0-100)
-        # We multiply by 10 because most countries have 1-5 events per year
-        hazard_map = (recent_hazards.groupby('ISO')['Total Events'].sum() * 10).clip(0, 100).to_dict()
-        # --- THE TRINITY CALCULATION ---
-        
         def calculate_nexus(row):
             country = str(row[c_col])
             iso3 = row.get('ISO', 'GLOBAL')
-            
-            # 1. ACLED (Current Violence): 0-100
             current = row.get('CONFLICT_INDEX', 50)
-            
-            # 2. GDELT (History): 0-100
             hist_avg = baseline_map.get(country, 0.0)
             hist_tension = max(0, ((hist_avg - 10) / -20) * 100)
-            
-            # 3. GPR (Strategic Sentiment): 0-100
             sentiment = gpr_map.get(iso3, latest_gpr_row['GPR'] / 2.0)
             sentiment_n = min(sentiment * 60, 100) 
-            
-            # 4. NEW: EM-DAT (Hazard Risk): 0-100
-            hazard_score = hazard_map.get(iso3, 10.0) # Default to 10 if no data
+            hazard_score = hazard_map.get(iso3, 10.0)
 
-            # UPDATED WEIGHTED BLEND: 40% Violence, 20% History, 20% News, 20% Hazards
             score = (current * 0.40) + (hist_tension * 0.20) + (sentiment_n * 0.20) + (hazard_score * 0.20)
-            
-            # Contrast curve for the visualizer
             return min(100, (score ** 1.1))
 
         current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_nexus, axis=1)
-        
-        # Dashboard Variables
         global_conflict_avg = current_risks['NEXUS_SCORE'].mean()
         tension_map_data = current_risks.set_index(c_col)['NEXUS_SCORE'].to_dict()
 
-        print(f"🌍 TRINITY NEXUS ONLINE: Global Intensity at {global_conflict_avg:.2f}%")
+        print(f"🌍 QUAD-NEXUS ONLINE: Global Intensity at {global_conflict_avg:.2f}%")
 
     except Exception as e:
         print(f"⚠️ Nexus Integration Error: {e}")
