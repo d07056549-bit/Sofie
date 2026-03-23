@@ -84,7 +84,7 @@ def main():
         baseline_map = baseline_df.iloc[:, 0].to_dict()
 
         # B. LOAD RECENT SENTIMENT (Caldara & Iacoviello GPR)
-        gpr_path = r"Data/raw/Events/Geopolitical Risk/data_gpr_export.xls"
+        gpr_path = r"Data/raw/Events/Geopolitical Risk/data_gpr_export.csv"
         gpr_df = pd.read_csv(gpr_path)
         latest_gpr_row = gpr_df.iloc[-1]
         # Mapping ISO3 (ARG, CHN) to a normalized 0-100 score
