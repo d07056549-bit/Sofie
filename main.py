@@ -177,7 +177,7 @@ def main():
 
         current_risks['NEXUS_SCORE'] = current_risks.apply(calculate_nexus, axis=1)
         global_conflict_avg = current_risks['NEXUS_SCORE'].mean()
-        tension_map_data = current_risks.set_index('ISO')['NEXUS_SCORE'].to_dict()
+        tension_map_data = current_risks[current_risks['ISO'] != 'GLOBAL'].set_index('ISO')['NEXUS_SCORE'].to_dict()
 
         print(f"🌍 QUAD-NEXUS ONLINE: Global Intensity at {global_conflict_avg:.2f}%")
     except Exception as e:
