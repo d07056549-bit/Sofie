@@ -11,7 +11,7 @@ class SofieVisualizer:
         os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
-    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
+    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix="", displacement_map=None):
         # Style Settings
         plt.style.use('dark_background')
         bg_panel = '#0A0A0A'
