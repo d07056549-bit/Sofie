@@ -3,84 +3,84 @@ import os
 import glob
 
 def run_acled_processing():
-    print("🧠 SOFIE INTELLIGENCE: Processing ACLED Excel Data...")
+    print("🧠 SOFIE INTELLIGENCE: Ingesting Regional & Summary Excel Data...")
     
-    # Path where your .xlsx files are located
     raw_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Conflict\ACLED"
     output_dir = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\processed"
     
-    # Search specifically for Excel files
     files = glob.glob(os.path.join(raw_path, "*.xlsx"))
-    
     if not files:
-        print(f"❌ ERROR: No Excel (.xlsx) files found in {raw_path}")
+        print(f"❌ ERROR: No Excel files found in {raw_path}")
         return
 
-    print(f"📂 Found {len(files)} Excel workbooks. Starting ingestion...")
     df_list = []
     
     for file in files:
         try:
-            # Read the Excel file (assumes data is on the first sheet)
-            temp_df = pd.read_excel(file)
-            
-            # Standardize column names
-            temp_df.columns = [c.upper() for c in temp_df.columns]
-            
-            if 'YEAR' not in temp_df.columns or 'COUNTRY' not in temp_df.columns:
-                print(f"  - Skipping {os.path.basename(file)}: Missing YEAR or COUNTRY columns.")
-                continue
-
-            # Filter for recent simulation data (2025-2026)
-            temp_df = temp_df[temp_df['YEAR'] >= 2025]
-            
-            # Determine metric type and subtype from filename
+            # Load the Excel file
+            df = pd.read_excel(file)
+            df.columns = [c.upper() for c in df.columns]
             fname = os.path.basename(file).lower()
-            metric = "FATALITY" if "fatalities" in fname else "EVENT"
-            
-            if "demonstration" in fname: subtype = "DEMO"
-            elif "targeting_civilians" in fname: subtype = "CIVILIAN_TARGET"
-            elif "political_violence" in fname: subtype = "POL_VIOLENCE"
-            else: subtype = "GENERAL"
-            
-            col_name = f"{metric}_{subtype}"
-            
-            # Identify the data column
-            data_col = 'EVENTS' if 'EVENTS' in temp_df.columns else 'FATALITIES'
-            
-            if data_col in temp_df.columns:
-                temp_df = temp_df.rename(columns={data_col: col_name})
-                temp_df = temp_df[['COUNTRY', 'YEAR', col_name]].set_index(['COUNTRY', 'YEAR'])
-                df_list.append(temp_df)
-                print(f"  + Ingested: {os.path.basename(file)}")
+
+            # --- LOGIC A: Handle Regional Aggregated Files (WEEK column) ---
+            if 'WEEK' in df.columns:
+                # Convert WEEK string (e.g., '2026-03-07') to a YEAR integer
+                df['YEAR'] = pd.to_datetime(df['WEEK']).dt.year
+                print(f"  + Parsed Timeline for: {os.path.basename(file)}")
+
+            # --- LOGIC B: Data Extraction ---
+            if 'YEAR' in df.columns and 'COUNTRY' in df.columns:
+                # Filter for current/near-future simulation years
+                df = df[df['YEAR'] >= 2025]
                 
+                # Determine metric name
+                metric_type = "FATALITIES" if "fatalities" in fname else "EVENTS"
+                # Label based on file type
+                if "africa" in fname: label = "AFRICA_RISK"
+                elif "middle-east" in fname: label = "ME_RISK"
+                elif "asia-pacific" in fname: label = "APAC_RISK"
+                elif "europe" in fname: label = "EUR_RISK"
+                elif "latin" in fname: label = "LATAM_RISK"
+                elif "demonstration" in fname: label = "DEMO_RISK"
+                else: label = "GEN_RISK"
+
+                # Group data to ensure one row per country per year
+                # We sum the values in case the regional file has multiple entries per country
+                val_col = 'FATALITIES' if 'FATALITIES' in df.columns else 'EVENTS'
+                summary = df.groupby(['COUNTRY', 'YEAR'])[val_col].sum().to_frame(label)
+                
+                df_list.append(summary)
+                print(f"    - Successfully mapped {len(summary)} country nodes.")
+            else:
+                print(f"  - Skipping {os.path.basename(file)}: Missing critical columns.")
+
         except Exception as e:
-            print(f"  - Error reading {os.path.basename(file)}: {e}")
+            print(f"  - Error processing {os.path.basename(file)}: {e}")
 
     if not df_list:
-        print("❌ ERROR: No valid data could be extracted from the Excel files.")
+        print("❌ ERROR: No data could be compiled.")
         return
 
-    # Merge all regional and metric data
-    acled_master = pd.concat(df_list, axis=1).fillna(0)
+    # Merge everything into one massive intelligence matrix
+    # Using 'outer' join to keep all countries even if they only appear in one file
+    master_intel = pd.concat(df_list, axis=1).fillna(0)
+
+    # 📈 CALCULATE COMPOSITE CONFLICT INDEX
+    # We weigh FATALITIES (Risk to Life) and EVENTS (Stability Friction)
+    risk_cols = master_intel.columns
+    master_intel['RAW_INTEL_SCORE'] = master_intel[risk_cols].sum(axis=1)
     
-    # Calculate Risk Score (Weights: Fatalities 2.0, Events 0.5)
-    f_cols = [c for c in acled_master.columns if 'FATALITY' in c]
-    e_cols = [c for c in acled_master.columns if 'EVENT' in c]
-    
-    acled_master['RAW_SCORE'] = (acled_master[e_cols].sum(axis=1) * 0.5) + \
-                                (acled_master[f_cols].sum(axis=1) * 2.0)
-    
-    # Normalize 0-100
-    acled_master['conflict_index'] = (acled_master['RAW_SCORE'] / acled_master['RAW_SCORE'].max() * 100).round(2)
-    
-    # Save the final CSV for main.py
+    # Normalize to 0-100 scale
+    max_val = master_intel['RAW_INTEL_SCORE'].max()
+    master_intel['conflict_index'] = (master_intel['RAW_INTEL_SCORE'] / max_val * 100).round(2)
+
+    # Save to Processed folder
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, "acled_risk_indices.csv")
-    acled_master.to_csv(output_file)
+    master_intel.to_csv(output_file)
     
-    print(f"\n✅ SUCCESS: Geopolitical Master Index created.")
-    print(f"📍 Location: {output_file}")
+    print(f"\n✅ SUCCESS: Integrated Geopolitical Intelligence Online.")
+    print(f"📍 Master Data: {output_file}")
 
 if __name__ == "__main__":
     run_acled_processing()
