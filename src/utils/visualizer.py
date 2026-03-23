@@ -65,10 +65,27 @@ class SofieVisualizer:
         ax4.set_facecolor('#F1F3F5')
         ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=16, fontweight='bold', pad=20)
         
-        y_pos = 0.92
-        for alert in alerts[:8]: # Show top 8 news items
+       y_pos = 0.92
+        # Keywords that trigger a "Risk" warning (Red)
+        risk_keywords = ['strike', 'conflict', 'war', 'shut', 'closed', 'delay', 'attack', 'piracy', 'incident']
+        # Keywords that trigger a "Growth" sign (Green)
+        growth_keywords = ['expansion', 'new', 'growth', 'opened', 'launch', 'investment', 'record']
+
+        for alert in alerts[:8]:
+            title = alert['title'].lower()
+            
+            # Determine Color based on sentiment
+            text_color = '#212529' # Default Black
+            if any(word in title for word in risk_keywords):
+                text_color = '#DC3545' # Red for Risk
+            elif any(word in title for word in growth_keywords):
+                text_color = '#28A745' # Green for Growth
+
+            # Draw the title with the new color
             ax4.text(0.05, y_pos, f"• {alert['title'][:45]}...", 
-                    transform=ax4.transAxes, fontsize=10, fontweight='bold', verticalalignment='top', wrap=True)
+                    transform=ax4.transAxes, fontsize=10, 
+                    color=text_color, fontweight='bold', 
+                    verticalalignment='top', wrap=True)
             y_pos -= 0.11
             
         ax4.get_xaxis().set_visible(False)
