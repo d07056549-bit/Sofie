@@ -9,7 +9,7 @@ class SofieVisualizer:
         # The new stable URL we just found:
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
-   def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
+    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
         import matplotlib.pyplot as plt
         import geopandas as gpd
         import os
