@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import os
+import geopandas as gpd
 
 class SofieVisualizer:
     def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
