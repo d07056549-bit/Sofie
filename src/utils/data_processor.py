@@ -4,11 +4,26 @@ import pandas as pd
 class SofieDataEngine:
     def __init__(self, root_dir="Data/raw"):
         self.root_dir = root_dir
-        # Fixed paths for the March 22 structure
-        self.paths = {
-            "cyber": os.path.join(root_dir, "Black Swan", "cybersecurity synthesized data.csv"),
-            "maritime": os.path.join(root_dir, "Black Swan", "Maritime Port Performance Project Dataset.csv")
-        }
+        def get_live_port_alerts(self):
+        """
+        Scrapes maritime news feeds for real-time port congestion.
+        """
+        feed_url = "https://www.maritime-executive.com/rss"
+        alerts = []
+        
+        try:
+            feed = feedparser.parse(feed_url)
+            # Take the top 5 most recent maritime alerts
+            for entry in feed.entries[:5]:
+                alerts.append({
+                    "title": entry.title,
+                    "link": entry.link,
+                    "summary": entry.summary[:100] + "..." 
+                })
+            return alerts
+        except Exception as e:
+            print(f"⚠️ LIVE FEED OFFLINE: {e}")
+            return [{"title": "Feed Unavailable", "summary": "Check internet connection."}]
 
     def run_all(self):
         """Pulls raw stats for the main stability calculation."""
