@@ -20,7 +20,7 @@ class SofieVisualizer:
         text_color = '#212529'
 
         # 1. Create the Figure
-        fig = plt.figure(figsize=(24, 14), facecolor=bg_main)
+        fig = plt.figure(figsize=(16, 11), facecolor='#121212')
         
         # --- PANEL A: GEOPOLITICAL RISK MAP (Top/Center) ---
         ax1 = fig.add_axes([0.05, 0.45, 0.72, 0.45])
