@@ -91,10 +91,10 @@ def main():
 
     # 3. Generate the Unified Dashboard
     # This combines the CSV data, the News Risk, and the Live Feed
-    visualizer.generate_unified_intel(
+   visualizer.generate_unified_intel(
         score=stability_score, 
         at_risk=at_risk_list, 
-        friction=live_stats['port_map'], 
+        friction=live_stats['port_map'],
         alerts=live_alerts, 
         suffix=file_suffix
     )
