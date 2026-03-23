@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 
 class SofieMapper:
-    def __init__(self, output_path="exports/"):
-        self.output_path = os.path.abspath(output_path)
+    def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
+        self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
 
