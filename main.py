@@ -95,11 +95,27 @@ def main():
         recent_hazards = hazard_df[hazard_df['Year'] == 2023].copy()
         hazard_map = (recent_hazards.groupby('ISO')['Total Events'].sum() * 10).clip(0, 100).to_dict()
 
-        # --- ISO FIX DICTIONARY (Place it here, inside the try block) ---
+        # --- ENHANCED ISO & NAME MAPPING ---
         iso_fix = {
-            'TUR': 'Turkey', 'SYR': 'Syria', 'PHL': 'Philippines',
-            'USA': 'United States of America', 'RUS': 'Russia', 'CHN': 'China'
+            # Format: 'DATA_NAME': 'MAP_NAME'
+            'VNM': 'Vietnam',
+            'SSD': 'S. Sudan',
+            'CZE': 'Czechia',
+            'ESH': 'W. Sahara',
+            'GNQ': 'Eq. Guinea',
+            'BHS': 'Bahamas',
+            'VUT': 'Vanuatu',
+            'BRN': 'Brunei',
+            'BTN': 'Bhutan',
+            'USA': 'United States of America',
+            'COD': 'Dem. Rep. Congo',
+            'TUR': 'Turkey',
+            'PHL': 'Philippines'
         }
+
+        # Apply the fix to your tension map
+        # This ensures the map finds the scores even if names differ
+        tension_map_data = {iso_fix.get(k, k): v for k, v in tension_map_data.items()}
 
         # D. LOAD LIVE EVENTS (ACLED 2026)
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
