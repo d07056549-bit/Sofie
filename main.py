@@ -76,6 +76,10 @@ def main():
     friction_data = data_engine.get_port_friction_map()
     LogisticsMapper().generate_heatmap(friction_data)
 
+    friction_data = data_engine.get_port_friction_map()
+    # Pass the suffix to the Logistics Mapper
+    LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
+
     # 7. Dashboard & Logging
     SofieVisualizer().generate_risk_chart(stability_score, curr)
     record_history(stability_score, args.scenario)
