@@ -16,6 +16,42 @@ class SofieDataEngine:
         except:
             return [{"title": "Feed Offline", "summary": "Direct CSV data only."}]
 
+    def get_at_risk_countries(self):
+        """
+        Analyzes TradeData CSVs to find countries with the highest 
+        economic exposure (Top 5 by primaryValue).
+        """
+        # List of the trade files you uploaded
+        trade_files = [
+            r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\TradeData_3_21_2026_13_19_10.csv",
+            r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\TradeData_3_21_2026_13_20_4.csv",
+            r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\TradeData_3_21_2026_13_21_3.csv"
+        ]
+        
+        at_risk = []
+        try:
+            # We'll look at the most recent trade file for our 'At Risk' list
+            latest_trade = trade_files[0] 
+            if os.path.exists(latest_trade):
+                df = pd.read_csv(latest_trade)
+                # Group by country and sum their trade value
+                top_trade = df.groupby('reporterDesc')['primaryValue'].sum().sort_values(ascending=False).head(5)
+                
+                for country, value in top_trade.items():
+                    # Format value to Billions for the dashboard
+                    billions = value / 1_000_000_000
+                    at_risk.append(f"{country} (${billions:.1f}B Trade)")
+            
+            # Fallback if no trade files found
+            if not at_risk:
+                at_risk = ["Global Shipping Hubs", "Suez Canal Transit", "Panama Canal Sector"]
+                
+        except Exception as e:
+            print(f"⚠️ Trade Analysis Error: {e}")
+            at_risk = ["Regional Port Clusters"]
+
+        return at_risk
+
     def run_all(self):
         print(">>> ENGINE STARTING: Processing Maritime Streams...")
         
