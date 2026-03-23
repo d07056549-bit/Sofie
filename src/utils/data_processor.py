@@ -4,10 +4,11 @@ import pandas as pd
 class SofieDataEngine:
     def __init__(self, root_dir="Data/raw"):
         self.root_dir = root_dir
-        def get_live_port_alerts(self):
+    def get_live_port_alerts(self):
         """
         Scrapes maritime news feeds for real-time port congestion.
         """
+        import feedparser
         feed_url = "https://www.maritime-executive.com/rss"
         alerts = []
         
