@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import os
+
 class SofieVisualizer:
     def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
         self.output_path = output_path
@@ -9,10 +10,19 @@ class SofieVisualizer:
         
    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
         import matplotlib.pyplot as plt
+        import geopandas as gpd
         import os
+
+       # Standard Colors for Light Mode
+        bg_main = '#FFFFFF'
+        bg_panel = '#F8F9FA'
+        text_color = '#212529'
+
+        # 1. Create the Figure
+        fig = plt.figure(figsize=(24, 14), facecolor=bg_main)
         
        # 1. Create the Figure
-        fig = plt.figure(figsize=(20, 12), facecolor='#FFFFFF')
+        fig = plt.figure(figsize=(24, 14), facecolor=bg_main)
         
       # --- PANEL A: Global Stability Gauge (Top Left) ---
         # [left, bottom, width, height]
