@@ -22,18 +22,34 @@ class SofieVisualizer:
         # 1. Create the Figure
         fig = plt.figure(figsize=(16, 11), facecolor='#121212')
         
-        # --- PANEL A: GEOPOLITICAL RISK MAP (Top/Center) ---
+        # --- PANEL A: WORLD TENSION HEATMAP (Top/Center) ---
         ax1 = fig.add_axes([0.05, 0.25, 0.70, 0.70])
         try:
             world = gpd.read_file(self.world_url)
-            world.plot(ax=ax1, color='#DEE2E6', edgecolor='#ADB5BD', linewidth=0.5) 
-            # Highlight at-risk countries in Crimson
-            world[world['NAME'].isin(at_risk)].plot(ax=ax1, color='#DC3545', alpha=0.8)
-        except:
-            ax1.text(0.5, 0.5, "MAP LAYER OFFLINE", ha='center')
+            
+            # 1. Map the risk scores to the GeoDataFrame
+            # We assume 'at_risk' is a dictionary: {'Sudan': 85.2, 'Ukraine': 92.0...}
+            world['tension'] = world['NAME'].map(at_risk).fillna(0)
+
+            # 2. Plot the Base Map (Grey for zero tension)
+            world[world['tension'] == 0].plot(ax=ax1, color='#DEE2E6', edgecolor='#ADB5BD', linewidth=0.5)
+            
+            # 3. Plot the Tension Layer (Choropleth)
+            # This creates the "Heatmap" look using the 'OrRd' (Orange-Red) scale
+            world[world['tension'] > 0].plot(
+                column='tension', 
+                ax=ax1, 
+                cmap='OrRd', 
+                edgecolor='#8B0000', 
+                linewidth=0.5,
+                vmin=0, vmax=100  # Sets the scale from 0 to 100%
+            )
+            
+        except Exception as e:
+            ax1.text(0.5, 0.5, f"MAP ERROR: {e}", ha='center', color='red')
         
-        ax1.set_title(f"TOP-LEVEL GEOPOLITICAL RISK | MARCH 2026 NEXUS {suffix.upper()}", 
-                      color=text_color, fontsize=24, pad=20, fontweight='bold')
+        ax1.set_title(f"WORLD TENSION MAP | MARCH 2026 NEXUS {suffix.upper()}", 
+                      color='#212529', fontsize=24, pad=20, fontweight='bold')
         ax1.set_axis_off()
 
         # --- PANEL B: MARITIME FRICTION NODES (Bottom Left) ---
