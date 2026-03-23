@@ -4,38 +4,52 @@ import os
 master_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Events\Gdelt\GDELT.MASTERREDUCEDV2.txt"
 output_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\processed\gdelt_historical_baseline.csv"
 
-print("⏳ Distilling Reduced GDELT File...")
+# The 17-column "Analyst" mapping
+# We use SQLDATE (YYYYMMDD) at Index 0 to get the Year
+# We use Actor1CountryCode at Index 4
+# We use GoldsteinScale at Index 9
+col_map = {0: 'Date', 4: 'CountryCode', 9: 'GoldsteinScale'}
+
+print("⏳ Distilling 17-Column Reduced GDELT File...")
 
 try:
-    # 1. Read the first few lines to determine columns automatically
-    df_preview = pd.read_csv(master_path, sep='\t', nrows=5, header=None)
-    
-    # 2. Identify columns by their data type
-    # Year is usually an integer > 1979
-    # Goldstein is a float between -10 and 10
-    # Country code is a 2 or 3 letter string
-    
-    total_cols = len(df_preview.columns)
-    print(f"🔍 Detected {total_cols} columns. Mapping data...")
+    # 1. Read the file with the 17-column mapping
+    chunks = pd.read_csv(
+        master_path, 
+        sep='\t', 
+        header=None, 
+        usecols=col_map.keys(),
+        chunksize=250000,
+        low_memory=False
+    )
 
-    # Standard "Reduced" mapping often puts Year at 0, Goldstein at 1, Country at 2
-    # We will try to read EVERYTHING and then filter
-    df = pd.read_csv(master_path, sep='\t', header=None, low_memory=False)
+    processed_chunks = []
+    for i, chunk in enumerate(chunks):
+        chunk.columns = [col_map[c] for c in chunk.columns]
+        
+        # Convert YYYYMMDD to just the Year
+        chunk['Year'] = (chunk['Date'] // 10000)
+        
+        # Filter for recent history (2020+)
+        recent = chunk[chunk['Year'] >= 2020].copy()
+        processed_chunks.append(recent[['CountryCode', 'GoldsteinScale']])
+        
+        if i % 4 == 0:
+            print(f"   ...Processed {i*250000:,} rows")
+
+    print("📊 Aggregating Historical Stability per Country...")
+    df = pd.concat(processed_chunks)
     
-    # Let's assume a common Reduced format: [Year, MonthDay, ID, Goldstein, Country...]
-    # We'll assign names based on common Reduced schemas
-    if total_cols >= 4:
-        df.columns = [f'col_{i}' for i in range(total_cols)]
-        # This is where we need the 'Peek' results to be 100% sure
-        # But let's try a common guess:
-        df = df.rename(columns={'col_0': 'Year', 'col_3': 'GoldsteinScale', 'col_4': 'CountryCode'})
+    # Drop rows where country code or goldstein is missing
+    df = df.dropna(subset=['CountryCode', 'GoldsteinScale'])
     
-    # Filter and Save
-    recent = df[df['Year'] >= 2022]
-    stability = recent.groupby('CountryCode')['GoldsteinScale'].mean()
-    stability.to_csv(output_path)
-    
-    print(f"✅ Baseline created with {len(stability)} countries.")
+    # Calculate average stability baseline
+    stability_lookup = df.groupby('CountryCode')['GoldsteinScale'].mean()
+
+    # Save the small reference file
+    stability_lookup.to_csv(output_path)
+    print(f"✅ SUCCESS! Created baseline for {len(stability_lookup)} countries.")
+    print(f"📍 Baseline saved to: {output_path}")
 
 except Exception as e:
-    print(f"❌ Brute force failed: {e}")
+    print(f"❌ Error: {e}")
