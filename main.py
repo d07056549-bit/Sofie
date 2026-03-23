@@ -19,13 +19,13 @@ def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\
     print(f"📊 HISTORICAL LOG UPDATED: {history_file}")
 
 def main():
-    # 1. Initialize Time and Arguments
+    # 1. SETUP VARIABLES (Scoped inside main)
     now = datetime.now()
     file_suffix = now.strftime("%H%M")
     live_date = now.strftime("%B %d, %Y")
     live_time = now.strftime("%H:%M")
 
-    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0 | March 23 Nexus")
+    parser = argparse.ArgumentParser(description="SOFIE Evolved v2.0")
     parser.add_argument('--scenario', type=str, default='baseline', 
                         choices=['baseline', 'peace', 'blackout', 'ultimatum_expires'])
     args = parser.parse_args()
@@ -35,11 +35,11 @@ def main():
     print(f"DATE: {live_date} | TIME: {live_time} GMT")
     print("="*55 + "\n")
 
-    # 2. Data Ingestion
+    # 2. INGESTION
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. Geopolitical Consensus (ACLED + UCDP)
+    # 3. GEOPOLITICAL CONSENSUS
     try:
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
@@ -56,7 +56,7 @@ def main():
     except Exception:
         global_conflict_avg = 0.47 
 
-    # 4. Scenario Logic
+    # 4. SCENARIO LOGIC
     scenarios = {
         'baseline': {'oil_price': 112.19, 'port_friction': live_stats['friction'], 'conflict': global_conflict_avg},
         'peace': {'oil_price': 72.50, 'port_friction': 1.0, 'conflict': 0.05},
@@ -65,12 +65,12 @@ def main():
     }
     current = scenarios.get(args.scenario, scenarios['baseline'])
 
-    # 5. Stability Calculation
+    # 5. CALCULATION
     oil_n = (min(current['oil_price'], 180) / 180) * 100
     fric_n = (min(current['port_friction'], 5.0) / 5.0) * 100
     stability_score = round((oil_n * 0.3) + (fric_n * 0.2) + (current['conflict'] * 0.5), 2)
 
-    # 6. Dashboard Generation
+    # 6. DASHBOARD
     visualizer = SofieVisualizer()
     visualizer.generate_unified_intel(
         score=stability_score, 
@@ -80,60 +80,13 @@ def main():
         suffix=file_suffix
     )
     
-    # 7. Final Logs
+    # 7. LOGS & SUMMARY
     record_history(stability_score, args.scenario)
 
     print("="*55)
     print(f"--- SITREP SUMMARY: {live_date.upper()} ---") 
     status = "CRITICAL" if stability_score > 70 else "STABLE"
     print(f"STATUS: {status}. Stability Index: {stability_score}%")
-    print("="*55)
-    print("--- RUN COMPLETE ---\n")
-
-# --- START ENGINE ---
-if __name__ == "__main__":
-    main()
-
-    # 8. Map Generation Setup
-    file_suffix = now.strftime("%H%M") 
-    at_risk_list = data_engine.get_at_risk_countries()
-    friction_data = data_engine.get_port_friction_map()
-
-    # Note: We skip individual maps because Unified Dashboard (Section 7) handles them better.
-    # SofieMapper().generate_risk_map(at_risk_list, suffix=file_suffix)
-    # LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
-
-   # 9. Unified Dashboard Generation
-    # 1. Fetch the Live Feed using the existing engine
-    live_alerts = data_engine.get_live_port_alerts() 
-
-    print(f"DEBUG: Found {len(live_alerts)} live alerts.")
-    if len(live_alerts) > 0:
-        print(f"DEBUG: First alert title: {live_alerts[0]['title']}")
-    
-    # 2. Initialize the Visualizer
-    visualizer = SofieVisualizer()
-
-    # 3. Generate the actual file
-    visualizer.generate_unified_intel(
-        score=stability_score, 
-        at_risk=at_risk_list, 
-        friction=friction_data, # This is your Port CSV data
-        alerts=live_alerts,     # This is your Online News feed
-        suffix=file_suffix
-    )
-    
-    record_history(stability_score, args.scenario)
-
-    # 8. SitRep Summary
-    print("="*55)
-    # CHANGE 'current_date' TO 'live_date' HERE:
-    print(f"--- SITREP SUMMARY: {live_date.upper()} ---") 
-    
-    if stability_score > 75:
-        print("STATUS: CRITICAL WATCH. Ultimatum window CLOSING.")
-    else:
-        print("STATUS: STABLE. Monitoring regional friction nodes.")
     print("="*55)
     print("--- RUN COMPLETE ---\n")
 
