@@ -167,7 +167,8 @@ def main():
 
 def calculate_nexus(row, displacement_map):
     """
-    Calculates the 2026 Quad-Nexus Score by balancing:
+    Calculates the 2026 Quad-Nexus Score.
+    """
     1. Hazard Index (Conflict Data) - 40%
     2. Sentiment Score (Market/News) - 30%
     3. Displacement Pressure (Migration) - 30%
