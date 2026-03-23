@@ -61,11 +61,13 @@ def main():
             if any(word in news for word in ["blockade", "strike", "ultimatum"]):
                 news_multiplier = 1.4
 
+    # FIX: Using live_stats to create a baseline
     base_stability = round(live_stats.get('friction', 1.0) * 35.0, 2)
     
     # Check the CLI --scenario flag
     if args.scenario in ["blackout", "ultimatum_expires"]:
         stability_score = round(base_stability * 1.5 * news_multiplier, 2)
+        status_msg = f"CRITICAL: {args.scenario.upper()} in effect." # Added this
         print(f"🚨 SCENARIO: {args.scenario.upper()} MODE ACTIVATED - Risk adjusted.")
     else:
         stability_score = round(base_stability * news_multiplier, 2)
