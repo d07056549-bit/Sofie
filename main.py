@@ -3,32 +3,46 @@ import argparse
 import requests
 import pandas as pd
 from datetime import datetime
+from gdeltdoc import GdeltDoc, Filters
 
 # Import custom intelligence modules
 from src.utils.visualizer import SofieVisualizer
 from src.utils.data_processor import SofieDataEngine
 
 def fetch_live_world_tension():
-    """Fetches real-time global conflict intensity from GDELT."""
-    print("📡 CONNECTING TO LIVE GEOPOLITICAL STREAM (GDELT)...")
+    """Uses the gdeltdoc client to analyze real-time global news volume."""
+    print("📡 ANALYZING LIVE GLOBAL NEWS STREAM (GDELT 2.0)...")
     
-    # Query for 'Conflict' and 'Protest' themes in the last 24 hours
-    url = "https://api.gdeltproject.org/api/v2/doc/doc?query=(theme:TAX_WORLDMAM_CONFLICT%20OR%20theme:TAX_MILITARY_ACTION)&mode=TimelineVol&format=json&timespan=24h"
-    
+    # 1. Setup Filters for Conflict & Crisis
+    # We look for keywords that drive 'World Tension'
+    f = Filters(
+        keyword = "(conflict OR military OR crisis OR blockade OR war)",
+        start_date = "2026-03-22",
+        end_date = "2026-03-23"
+    )
+
+    gd = GdeltDoc()
+
     try:
-        response = requests.get(url, timeout=10)
-        data = response.json()
+        # 2. Search for Timeline Volume (Percentage of global news coverage)
+        # mode="timelinevol" returns how much of the world's news is about these topics
+        timeline = gd.timeline_search("timelinevol", f)
         
-        # GDELT returns 'TimelineVol' (Volume of news). 
-        # We normalize this into a 0-100 Tension Score.
-        # Higher volume of 'Conflict' news = Higher World Tension.
-        latest_vol = data['timeline'][0]['data'][-1]['value']
+        if not timeline.empty:
+            # Get the very latest volume value
+            latest_vol = timeline['value'].iloc[-1]
+            
+            # GDELT volume is a percentage (e.g., 0.5% of all global news).
+            # We multiply by a factor (e.g., 20) to turn it into a 0-100 Tension Score.
+            # If 5% of all news on earth is about 'war', tension should be 100%.
+            live_score = min(float(latest_vol) * 20, 100) 
+            return round(live_score, 2)
+            
+        print("⚠️ GDELT returned empty timeline. Using historical baseline.")
+        return None
         
-        # Simple Normalization (Adjust the 5.0 divisor based on how 'sensitive' you want it)
-        live_score = min(float(latest_vol) * 10, 100) 
-        return round(live_score, 2)
     except Exception as e:
-        print(f"⚠️ Live Feed Offline: {e}. Falling back to CSV.")
+        print(f"⚠️ GDELT Client Error: {e}. Reverting to Historical CSV.")
         return None
 
 def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
