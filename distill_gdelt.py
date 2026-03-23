@@ -4,53 +4,67 @@ import os
 master_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Events\Gdelt\GDELT.MASTERREDUCEDV2.txt"
 output_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\processed\gdelt_historical_baseline.csv"
 
-# The 17-column "Analyst" mapping
-col_map = {0: 'Date', 4: 'CountryCode', 9: 'GoldsteinScale'}
+# Let's try to find the Country Code by looking at columns 4, 5, 7, and 12 
+# (Common spots for country data in reduced files)
+col_map = {0: 'Date', 4: 'Country1', 5: 'Country2', 9: 'GoldsteinScale'}
 
-print("⏳ Distilling 17-Column Reduced GDELT File...")
+print("⏳ Re-Distilling 87M Rows (Diagnostic Mode)...")
 
 try:
-    # 1. Read the file
     chunks = pd.read_csv(
-        master_path, 
-        sep='\t', 
-        header=None, 
-        usecols=col_map.keys(),
-        chunksize=250000,
-        low_memory=False
+        master_path, sep='\t', header=None, 
+        usecols=col_map.keys(), chunksize=500000, low_memory=False
     )
 
     processed_chunks = []
+    
+    # Peek at the first chunk to see what we're working with
+    first_chunk = next(chunks)
+    print("\n--- DATA PEEK (First 5 Rows) ---")
+    print(first_chunk.head())
+    print("-------------------------------\n")
+
+    # Reset chunks and start loop
+    chunks = pd.read_csv(
+        master_path, sep='\t', header=None, 
+        usecols=col_map.keys(), chunksize=1000000, low_memory=False
+    )
+
     for i, chunk in enumerate(chunks):
         chunk.columns = [col_map[c] for c in chunk.columns]
         
-        # --- FIX: Convert to numeric, skipping errors ---
+        # Proper way to create a new column without the warning
+        chunk = chunk.copy() 
         chunk['Date'] = pd.to_numeric(chunk['Date'], errors='coerce')
         chunk['GoldsteinScale'] = pd.to_numeric(chunk['GoldsteinScale'], errors='coerce')
         
-        # Remove any rows that failed conversion
-        chunk = chunk.dropna(subset=['Date', 'GoldsteinScale'])
-        
-        # Convert YYYYMMDD to just the Year
+        # Extract Year safely
+        chunk = chunk.dropna(subset=['Date'])
         chunk['Year'] = (chunk['Date'] // 10000).astype(int)
         
-        # Filter for recent history (2020+)
-        recent = chunk[chunk['Year'] >= 2020].copy()
-        processed_chunks.append(recent[['CountryCode', 'GoldsteinScale']])
+        # Only keep 2020+
+        recent = chunk[chunk['Year'] >= 2020]
         
-        if i % 4 == 0:
-            print(f"   ...Processed {i*250000:,} rows")
+        # Use Country1 as the primary, but if it's empty, we'll try to find any string
+        processed_chunks.append(recent[['Country1', 'GoldsteinScale']])
+        
+        if i % 5 == 0:
+            print(f"   ...Processed {i+1} Million rows")
 
-    print("📊 Aggregating Historical Stability per Country...")
+    print("📊 Aggregating...")
     df = pd.concat(processed_chunks)
     
-    # Calculate average stability baseline
-    stability_lookup = df.groupby('CountryCode')['GoldsteinScale'].mean()
+    # CLEANING: Drop rows where Country is NaN or just whitespace
+    df = df.dropna(subset=['Country1'])
+    df = df[df['Country1'].astype(str).str.strip() != ""]
+    
+    stability = df.groupby('Country1')['GoldsteinScale'].mean()
 
-    # Save
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    stability_lookup.to_csv(output_path)
-    print(f"✅ SUCCESS! Created baseline for {len(stability_lookup)} countries.")
+    if len(stability) == 0:
+        print("❌ Still found 0 countries. Check the 'DATA PEEK' above to see which column has the codes!")
+    else:
+        stability.to_csv(output_path)
+        print(f"✅ SUCCESS! Created baseline for {len(stability)} countries.")
 
 except Exception as e:
     print(f"❌ Error: {e}")
