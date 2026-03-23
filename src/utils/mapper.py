@@ -1,37 +1,34 @@
 import os
 import matplotlib.pyplot as plt
-import geopandas as gpd
 
-class SofieMapper:
+class LogisticsMapper:
     def __init__(self, output_path="exports/"):
         self.output_path = output_path
         os.makedirs(output_path, exist_ok=True)
-        # RELIABLE URL FOR WORLD DATA
-        self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
 
-    def generate_risk_map(self, at_risk_list, suffix=""):
+    # MUST have 'suffix=""' to match the main.py call
+    def generate_heatmap(self, friction_data, suffix=""):
         try:
-            # 1. Load the world map from the reliable ZIP URL
-            world = gpd.read_file(self.world_url)
+            fig, ax = plt.subplots(figsize=(15, 8))
+            ax.set_facecolor('#000d1a') 
             
-            # 2. Setup the Plot
-            fig, ax = plt.subplots(figsize=(15, 7), facecolor='#0d0d0d')
-            world.plot(ax=ax, color='#1a1a1a', edgecolor='#333333')
+            # Sub-logic: Plotting the maritime grid
+            for x in range(-180, 181, 30): ax.axvline(x, color='white', alpha=0.05)
+            for y in range(-90, 91, 30): ax.axhline(y, color='white', alpha=0.05)
             
-            # 3. Highlight At-Risk Countries
-            # Note: Ensure country names in your data match Natural Earth names (e.g. 'United States of America')
-            world[world['NAME'].isin(at_risk_list)].plot(ax=ax, color='red', alpha=0.6)
+            for port, data in friction_data.items():
+                color = 'red' if data['friction'] > 3.0 else '#00ff00'
+                ax.scatter(data['lon'], data['lat'], s=200, c=color, edgecolors='white', zorder=3)
+                ax.text(data['lon']+2, data['lat'], port.upper(), color='white', fontsize=8)
+
+            ax.set_xlim(-180, 180); ax.set_ylim(-60, 85)
+            ax.set_title(f"MARITIME FRICTION NODES | {suffix}", color='cyan', loc='left')
             
-            ax.set_title(f"SOFIE GEOPOLITICAL TENSION MAP | MARCH 23", color='cyan', fontsize=12, loc='left')
-            ax.set_axis_off()
-            
-            # 4. Save with Suffix
-            filename = f"risk_map_march_23_{suffix}.png"
-            output_file = os.path.join(self.output_path, filename)
-            
-            plt.savefig(output_file, facecolor='#0d0d0d', bbox_inches='tight', dpi=150)
+            # Filename MUST include suffix
+            filename = f"logistics_heatmap_march_23_{suffix}.png"
+            plt.savefig(os.path.join(self.output_path, filename), facecolor='#000d1a', bbox_inches='tight')
             plt.close()
-            print(f"-> Geographic Heatmap Exported: {filename}")
+            print(f"-> Logistics Heatmap Exported: {filename}")
             
         except Exception as e:
-            print(f"!! MAPPER FAILURE: {e}")
+            print(f"!! LOGISTICS MAP FAILURE: {e}")
