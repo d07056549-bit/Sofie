@@ -1,60 +1,38 @@
-import geopandas as gpd
-import matplotlib.pyplot as plt
 import os
 import requests
-import json
+import matplotlib.pyplot as plt
+import geopandas as gpd
 
 class SofieMapper:
     def __init__(self, output_path="exports/"):
         self.output_path = output_path
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
+        os.makedirs(output_path, exist_ok=True)
+        # Define the source URL here so it's globally available in the class
+        self.world_url = "https://raw.githubusercontent.com/holtzy/The-Python-Graph-Gallery/master/static/data/world.json"
 
-    def generate_risk_map(self, at_risk_countries):
-        # Reliable Raw GeoJSON URL
-        world_url = "https://raw.githubusercontent.com/python-visualization/folium/master/examples/data/world-countries.json"
-        
+    def generate_risk_map(self, at_risk_list, suffix=""):
         try:
-            # 1. Manually fetch the data to ensure no "Unexpected Character" HTML errors
-            response = requests.get(world_url, timeout=10)
-            if response.status_code != 200:
-                raise Exception(f"GitHub returned status {response.status_code}")
+            # 1. Load the world map
+            world = gpd.read_file(self.world_url)
             
-            # 2. Load the GeoJSON content
-            data = response.json()
-            world = gpd.GeoDataFrame.from_features(data, crs="EPSG:4326")
+            # 2. Setup the Plot
+            fig, ax = plt.subplots(figsize=(15, 7), facecolor='#0d0d0d')
+            world.plot(ax=ax, color='#1a1a1a', edgecolor='#333333')
             
-            # 3. Match country names (The 'name' column is standard in this dataset)
-            world['risk_level'] = world['name'].apply(lambda x: 1 if x in at_risk_countries else 0)
-
-            fig, ax = plt.subplots(1, 1, figsize=(15, 8), facecolor='#1e1e1e')
+            # 3. Highlight At-Risk Countries
+            # (Matches the names in your data_engine list)
+            world[world['name'].isin(at_risk_list)].plot(ax=ax, color='red', alpha=0.6)
             
-            # Base Layer (Dark mode for the War Room)
-            world.plot(ax=ax, color='#2d3436', edgecolor='#636e72', linewidth=0.5)
+            ax.set_title(f"SOFIE GEOPOLITICAL TENSION MAP | MARCH 23", color='white', fontsize=12)
+            ax.set_axis_off()
             
-            # Risk Layer (Neon Red for high alert)
-            world[world.risk_level == 1].plot(ax=ax, color='#ff7675', edgecolor='white', linewidth=1)
+            # 4. Save with Suffix
+            filename = f"risk_map_march_23_{suffix}.png"
+            output_file = os.path.join(self.output_path, filename)
             
-            plt.title("SOFIE GLOBAL RISK MAP | NEXUS EVENT: MARCH 22, 2026", 
-                      fontsize=18, fontweight='bold', color='white', pad=20)
-            
-            # Conflict Indicator (Strait of Hormuz)
-            ax.plot(56, 26, marker='x', color='#0984e3', markersize=12, mew=3, label='Hormuz Blockade')
-            # Conflict Indicator (Diego Garcia)
-            ax.plot(72, -7, marker='x', color='#0984e3', markersize=12, mew=3, label='Diego Garcia Strike')
-
-            # Status Box
-            ax.annotate('DEFCON: 2 - REGIONAL ESCALATION', xy=(0.02, 0.05), 
-                        xycoords='axes fraction', fontsize=12, color='#ff7675', 
-                        weight='bold', bbox=dict(boxstyle='round,pad=0.5', facecolor='black', alpha=0.8))
-
-            ax.axis('off')
-            
-            map_file = os.path.join(self.output_path, "risk_map_march_22.png")
-            plt.savefig(map_file, dpi=200, bbox_inches='tight', facecolor='#1e1e1e')
+            plt.savefig(output_file, facecolor='#0d0d0d', bbox_inches='tight')
             plt.close()
-            print(f"-> Geographic Heatmap Exported: {map_file}")
+            print(f"-> Geographic Heatmap Exported: {filename}")
             
         except Exception as e:
-            print(f"!! MAP ENGINE FAILURE: {e}")
-            print("-> Proceeding with standard exports only.")
+            print(f"!! MAPPER FAILURE: {e}")
