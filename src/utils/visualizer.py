@@ -65,7 +65,7 @@ class SofieVisualizer:
         ax4.set_facecolor('#F1F3F5')
         ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=16, fontweight='bold', pad=20)
         
-       y_pos = 0.92
+        y_pos = 0.92
         # Keywords that trigger a "Risk" warning (Red)
         risk_keywords = ['strike', 'conflict', 'war', 'shut', 'closed', 'delay', 'attack', 'piracy', 'incident']
         # Keywords that trigger a "Growth" sign (Green)
