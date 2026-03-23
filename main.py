@@ -186,6 +186,7 @@ def main():
     # --- WEIGHTED CALCULATION ---
     # 0.4 Hazard + 0.3 Sentiment + 0.3 Displacement
     nexus_base = (hazard * 0.4) + (sentiment * 0.3) + (displacement * 0.3)
+
     
     # Scale to 0-100%
     nexus_score = nexus_base * 100
