@@ -93,14 +93,23 @@ def main():
     # 6. Get the News Feed (for the sidebar)
     live_alerts = data_engine.get_live_port_alerts()
     
-    # 7. Stability Index Calculation
-    curr = scenarios[args.scenario]
-    oil_comp = (min(curr['oil_price'], 200) / 200) * 45
-    fric_comp = (min(curr['port_friction'], 5) / 5) * 30
-    risk_comp = (min(curr['sovereign_risk_entities'], 195) / 195) * 25
-    stability_score = round(oil_comp + fric_comp + risk_comp, 2)
+    # 7. MULTI-DOMAIN STABILITY PREDICTION
+    # Load the processed ACLED data
+    import pandas as pd
+    acled_data = pd.read_csv("Data/processed/acled_risk_indices.csv")
+    global_conflict_avg = acled_data[acled_data['YEAR'] == 2026]['conflict_index'].mean()
 
-    print(f">>> GLOBAL STABILITY INDEX: {stability_score} <<<\n")
+    # New Weights: 30% Energy | 20% Logistics | 50% Geopolitical Risk (ACLED)
+    w_energy, w_logistics, w_conflict = 0.30, 0.20, 0.50
+
+    # Normalization
+    oil_n = (min(current_scenario['oil_price'], 180) / 180) * 100
+    fric_n = (min(current_scenario['port_friction'], 5.0) / 5.0) * 100
+    conf_n = global_conflict_avg # Already 0-100
+
+    stability_score = round((oil_n * w_energy) + (fric_n * w_logistics) + (conf_n * w_conflict), 2)
+    
+    print(f"🌍 GEOPOLITICAL Intel: Global Conflict baseline at {global_conflict_avg:.2f}%")
 
     # 8. Map Generation Setup
     file_suffix = now.strftime("%H%M") 
