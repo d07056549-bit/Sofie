@@ -81,11 +81,21 @@ def main():
     LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
     # 7. Unified Dashboard Generation
-    # We pass the score, the risk list, and the friction data into one function
-    SofieVisualizer().generate_unified_intel(
+    # 1. Initialize the Engine and Visualizer
+    engine = DataEngine()
+    visualizer = SofieVisualizer()
+
+    # 2. Fetch the Live Feed (The "Pulse")
+    print(">>> FETCHING LIVE MARITIME INTELLIGENCE...")
+    live_alerts = engine.get_live_port_alerts() 
+
+    # 3. Generate the Unified Dashboard
+    # This combines the CSV data, the News Risk, and the Live Feed
+    visualizer.generate_unified_intel(
         score=stability_score, 
         at_risk=at_risk_list, 
         friction=friction_data, 
+        alerts=live_alerts, 
         suffix=file_suffix
     )
     
