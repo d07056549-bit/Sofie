@@ -4,64 +4,47 @@ import os
 master_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Events\Gdelt\GDELT.MASTERREDUCEDV2.txt"
 output_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\processed\gdelt_historical_baseline.csv"
 
-# Let's try to find the Country Code by looking at columns 4, 5, 7, and 12 
-# (Common spots for country data in reduced files)
-col_map = {0: 'Date', 4: 'Country1', 5: 'Country2', 9: 'GoldsteinScale'}
+# Based on your peek: 
+# 0 is Date, 4 is NumEvents, 5 is NumArts. 
+# In this 17-col format, Index 1 is usually the Country Code!
+col_map = {0: 'Date', 1: 'CountryCode', 5: 'NumArts'}
 
-print("⏳ Re-Distilling 87M Rows (Diagnostic Mode)...")
+print("⏳ Distilling Volume-Based GDELT File...")
 
 try:
+    # Process in large chunks for speed
     chunks = pd.read_csv(
         master_path, sep='\t', header=None, 
-        usecols=col_map.keys(), chunksize=500000, low_memory=False
+        usecols=col_map.keys(), chunksize=2000000, low_memory=False,
+        skiprows=1 # Skip that 'Date NumEvents' header row we saw in the peek
     )
 
     processed_chunks = []
-    
-    # Peek at the first chunk to see what we're working with
-    first_chunk = next(chunks)
-    print("\n--- DATA PEEK (First 5 Rows) ---")
-    print(first_chunk.head())
-    print("-------------------------------\n")
-
-    # Reset chunks and start loop
-    chunks = pd.read_csv(
-        master_path, sep='\t', header=None, 
-        usecols=col_map.keys(), chunksize=1000000, low_memory=False
-    )
 
     for i, chunk in enumerate(chunks):
         chunk.columns = [col_map[c] for c in chunk.columns]
         
-        # Proper way to create a new column without the warning
-        chunk = chunk.copy() 
+        # Convert to numeric
         chunk['Date'] = pd.to_numeric(chunk['Date'], errors='coerce')
-        chunk['GoldsteinScale'] = pd.to_numeric(chunk['GoldsteinScale'], errors='coerce')
+        chunk['NumArts'] = pd.to_numeric(chunk['NumArts'], errors='coerce')
         
-        # Extract Year safely
-        chunk = chunk.dropna(subset=['Date'])
-        chunk['Year'] = (chunk['Date'] // 10000).astype(int)
+        # Extract Year and Filter for 2020+
+        chunk = chunk.dropna(subset=['Date', 'CountryCode'])
+        chunk['Year'] = (chunk['Date'] // 10000)
         
-        # Only keep 2020+
-        recent = chunk[chunk['Year'] >= 2020]
+        recent = chunk[chunk['Year'] >= 2020].copy()
+        processed_chunks.append(recent[['CountryCode', 'NumArts']])
         
-        # Use Country1 as the primary, but if it's empty, we'll try to find any string
-        processed_chunks.append(recent[['Country1', 'GoldsteinScale']])
-        
-        if i % 5 == 0:
-            print(f"   ...Processed {i+1} Million rows")
+        print(f"   ...Processed {(i+1)*2:,} Million rows")
 
-    print("📊 Aggregating...")
+    print("📊 Calculating News Volume Baseline per Country...")
     df = pd.concat(processed_chunks)
     
-    # CLEANING: Drop rows where Country is NaN or just whitespace
-    df = df.dropna(subset=['Country1'])
-    df = df[df['Country1'].astype(str).str.strip() != ""]
-    
-    stability = df.groupby('Country1')['GoldsteinScale'].mean()
+    # Baseline = Average number of articles per mention for that country
+    stability = df.groupby('CountryCode')['NumArts'].mean()
 
     if len(stability) == 0:
-        print("❌ Still found 0 countries. Check the 'DATA PEEK' above to see which column has the codes!")
+        print("❌ Still 0 countries. Try changing col_map index 1 to 2 or 3.")
     else:
         stability.to_csv(output_path)
         print(f"✅ SUCCESS! Created baseline for {len(stability)} countries.")
