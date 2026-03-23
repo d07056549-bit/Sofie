@@ -19,7 +19,7 @@ def fetch_live_world_tension():
         timespan = "24h" # Scans the last 24 hours relative to NOW
     )
     gd = GdeltDoc()
-
+    
     try:
         timeline = gd.timeline_search("timelinevol", f)
         
