@@ -97,28 +97,36 @@ def main():
 
         # --- ENHANCED ISO & NAME MAPPING ---
         iso_fix = {
-            # Map-Name Sync for your specific Missing Nodes
-            'VNM': 'Vietnam',
-            'CIV': "Côte d'Ivoire",
-            'SSD': 'S. Sudan',
-            'FLK': 'Falkland Is.',
-            'TLS': 'Timor-Leste',
-            'DOM': 'Dominican Rep.',
-            'LSO': 'Lesotho',
-            'CYP': 'N. Cyprus',
-            'CZE': 'Czechia',
-            'CAF': 'Central African Rep.',
-            # Essential Power-Users
+            # Africa
             'COD': 'Dem. Rep. Congo',
             'COG': 'Congo',
+            'CAF': 'Central African Rep.',
+            'SSD': 'S. Sudan',
+            'CIV': "Côte d'Ivoire",
             'GNQ': 'Eq. Guinea',
+            'LSO': 'Lesotho',
+            
+            # Asia & Oceania
+            'VNM': 'Vietnam',
+            'Viet Nam': 'Vietnam',
+            'TLS': 'Timor-Leste',
             'VUT': 'Vanuatu',
             'BRN': 'Brunei',
             'BTN': 'Bhutan',
-            'USA': 'United States of America',
-            'TUR': 'Turkey',
             'PHL': 'Philippines',
-            'PSE': 'Palestine'
+            
+            # Europe & Americas
+            'CZE': 'Czechia',
+            'DOM': 'Dominican Rep.',
+            'BHS': 'Bahamas',
+            'BIH': 'Bosnia and Herz.',
+            'FLK': 'Falkland Is.',
+            
+            # Territories & Others
+            'CYP': 'N. Cyprus',
+            'ATF': 'Fr. S. Antarctic Lands',
+            'USA': 'United States of America',
+            'TUR': 'Turkey'
         }
 
         # Apply the fix to your tension map
