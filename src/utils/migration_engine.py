@@ -17,7 +17,7 @@ class MigrationEngine:
             # 1. Clean the 'Value' column
             # Convert '*' to 1, others to numeric, and force to FLOAT
             current_data.loc[:, 'Value'] = pd.to_numeric(
-                current_data['Value'].astype(str).replace('\*', '1', regex=True), 
+                current_data['Value'].astype(str).replace(r'\*', '1', regex=True), 
                 errors='coerce'
             ).fillna(0).astype(float)
             
