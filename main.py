@@ -1,7 +1,12 @@
+import sys
+import os
 import pandas as pd
 import numpy as np
 import argparse
 import traceback
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from src.utils.data_engine import DataEngine
 from src.utils.visualizer import Visualizer
 from src.utils.migration_engine import MigrationEngine 
