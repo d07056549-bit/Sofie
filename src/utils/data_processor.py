@@ -54,7 +54,8 @@ class SofieDataEngine:
         # --- CRITICAL: Ensure 'friction' is a FLOAT, not a DICT ---
         return {
             "alerts": self.get_live_port_alerts(),
-            "friction": float(global_avg_friction), # This number fixes the TypeError
-            "port_map": port_map,                  # This dict is for the Visualizer
+            "friction": float(global_avg_friction),
+            "port_map": port_map,
+            "fatalities": 0,
             "status": "Operational"
         }
