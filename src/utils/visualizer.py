@@ -8,14 +8,25 @@ class SofieVisualizer:
         os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
         
-    def generate_unified_intel(self, score, at_risk, friction, suffix=""):
-        # 1. Setup the Master Canvas (Pure White)
-        bg_main = '#FFFFFF'
-        bg_panel = '#F8F9FA' # Very light grey for panel separation
-        text_color = '#212529' # Dark slate for text
+    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix=""):
+        # ... setup canvas code from before ...
         
-        fig = plt.figure(figsize=(20, 12), facecolor=bg_main)
-        gs = fig.add_gridspec(2, 2, height_ratios=[1.2, 1])
+        # --- NEW PANEL D: LIVE PORT TRAFFIC FEED (Right Side overlay or new slot) ---
+        # Let's place it as a vertical sidebar or a footer
+        ax4 = fig.add_axes([0.82, 0.1, 0.15, 0.8]) # Custom position for sidebar
+        ax4.set_facecolor('#F8F9FA')
+        ax4.set_title("LIVE PORT ALERTS", color='#212529', fontsize=14, fontweight='bold')
+        
+        y_pos = 0.9
+        for alert in alerts:
+            ax4.text(0.05, y_pos, f"• {alert['title'][:30]}", 
+                     transform=ax4.transAxes, color='#DC3545', fontsize=9, fontweight='bold')
+            ax4.text(0.05, y_pos-0.05, f"{alert['summary'][:50]}", 
+                     transform=ax4.transAxes, color='#495057', fontsize=8)
+            y_pos -= 0.15
+            
+        ax4.get_xaxis().set_visible(False)
+        ax4.get_yaxis().set_visible(False)
         
         # --- PANEL A: GEOPOLITICAL RISK MAP (Top Span) ---
         ax1 = fig.add_subplot(gs[0, :])
