@@ -85,14 +85,29 @@ class SofieVisualizer:
         ax3.set_axis_off()
         ax3.set_title("SYSTEM STABILITY INDEX", color=text_color, fontsize=14, fontweight='bold')
 
-        # --- PANEL D: LIVE ALERTS ---
+        # --- PANEL D: LIVE ALERTS (Universal Data Fix) ---
         ax4 = fig.add_axes([0.65, 0.05, 0.30, 0.15])
         ax4.set_facecolor(bg_panel)
         y_pos = 0.8
         ax4.text(0.05, 0.9, "ACTIVE STRATEGIC ALERTS:", color=accent_color, fontsize=12, fontweight='bold')
-        for alert in alerts[:4]:
-            ax4.text(0.05, y_pos, f"> {alert[:50]}...", color=text_color, fontsize=10, family='monospace')
-            y_pos -= 0.2
+        
+        if alerts and isinstance(alerts, list):
+            for alert in alerts[:4]:
+                # 1. Extract text if it's a dictionary, otherwise force to string
+                if isinstance(alert, dict):
+                    # Try to find a 'message' or 'event' key, else just stringify the dict
+                    text = alert.get('message', alert.get('event', str(alert)))
+                else:
+                    text = str(alert)
+                
+                # 2. Safely slice the text for the display
+                display_text = text[:50] + "..." if len(text) > 50 else text
+                
+                ax4.text(0.05, y_pos, f"> {display_text}", color=text_color, fontsize=10, family='monospace')
+                y_pos -= 0.2
+        else:
+            ax4.text(0.05, 0.7, "> SENSORS SCANNING...", color=text_color, fontsize=10)
+            
         ax4.set_axis_off()
 
         # Save output
