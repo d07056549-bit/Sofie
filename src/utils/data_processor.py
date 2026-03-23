@@ -8,14 +8,28 @@ class SofieDataEngine:
         self.maritime_path = r"C:\Users\Empok\Documents\GitHub\Sofie\Data\raw\Supply Chain\Port\Maritime Port Performance Project Dataset.csv"
 
     def get_live_port_alerts(self):
-        """Scrapes the live maritime feed."""
-        feed_url = "https://www.maritime-executive.com/rss"
+        """Fetches maritime news strictly from live RSS feeds."""
+        import feedparser
+        
+        feeds = [
+            "https://gcaptain.com/feed/",
+            "https://www.maritime-executive.com/rss"
+        ]
+        
+        all_alerts = []
         try:
-            feed = feedparser.parse(feed_url)
-            return [{"title": e.title, "summary": e.summary[:100]} for e in feed.entries[:5]]
-        except:
-            return [{"title": "Feed Offline", "summary": "Direct CSV data only."}]
-
+            for url in feeds:
+                feed = feedparser.parse(url)
+                for entry in feed.entries[:8]: # Grab top 8
+                    all_alerts.append({
+                        'title': entry.title,
+                        'source': 'Live Feed'
+                    })
+        except Exception:
+            # If the web fails, we use a hardcoded "System Status" so it's not blank
+            all_alerts = [{'title': "SYSTEM: Live Feed Offline. Check Network Connection.", 'source': 'System'}]
+            
+        return all_alerts
     def get_at_risk_countries(self):
         """
         Analyzes TradeData CSVs to find countries with the highest 
