@@ -39,21 +39,25 @@ def main():
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 3. GEOPOLITICAL CONSENSUS
+    # 3. GEOPOLITICAL CONSENSUS (World Tension Model)
     try:
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
-        latest_acled = acled_df['YEAR'].max()
-        acled_score = acled_df[acled_df['YEAR'] == latest_acled]['CONFLICT_INDEX'].mean()
+        
+        # WORLD TENSION LOGIC: Look at the top 10 most violent hotspots
+        top_acled = acled_df[acled_df['YEAR'] == acled_df['YEAR'].max()]['CONFLICT_INDEX'].nlargest(10).mean()
 
         ucdp_df = pd.read_csv("Data/processed/ucdp_risk_indices.csv")
         ucdp_df.columns = [c.upper() for c in ucdp_df.columns]
-        latest_ucdp = ucdp_df['YEAR'].max()
-        ucdp_score = ucdp_df[ucdp_df['YEAR'] == latest_ucdp]['UCDP_RISK_INDEX'].mean()
+        top_ucdp = ucdp_df[ucdp_df['YEAR'] == ucdp_df['YEAR'].max()]['UCDP_RISK_INDEX'].nlargest(10).mean()
 
-        global_conflict_avg = (acled_score + ucdp_score) / 2
-        print(f"🌍 GEOPOLITICAL Intel: Consensus Risk (ACLED+UCDP) at {global_conflict_avg:.2f}%")
-    except Exception:
+        # World Tension is the average of the most intense global hotspots
+        world_tension = (top_acled + top_ucdp) / 2
+        
+        print(f"🌍 WORLD TENSION: Current Global Flashpoints at {world_tension:.2f}%")
+        global_conflict_avg = world_tension # Use tension instead of global average
+    except Exception as e:
+        print(f"⚠️ Tension Calculation Error: {e}")
         global_conflict_avg = 0.47 
 
     # 4. SCENARIO LOGIC
