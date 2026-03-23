@@ -94,22 +94,22 @@ def main():
     live_alerts = data_engine.get_live_port_alerts()
     
     # 7. MULTI-DOMAIN STABILITY PREDICTION
-    # Load the processed ACLED data
-    import pandas as pd
-    acled_data = pd.read_csv("Data/processed/acled_risk_indices.csv")
-    global_conflict_avg = acled_data[acled_data['YEAR'] == 2026]['conflict_index'].mean()
+    try:
+        # Load ACLED
+        acled_data = pd.read_csv("Data/processed/acled_risk_indices.csv")
+        acled_score = acled_data[acled_data['YEAR'] == 2026]['conflict_index'].mean()
 
-    # New Weights: 30% Energy | 20% Logistics | 50% Geopolitical Risk (ACLED)
-    w_energy, w_logistics, w_conflict = 0.30, 0.20, 0.50
+        # Load UCDP
+        ucdp_data = pd.read_csv("Data/processed/ucdp_risk_indices.csv")
+        ucdp_score = ucdp_data[ucdp_data['year'] == 2026]['ucdp_risk_index'].mean()
 
-    # Normalization
-    oil_n = (min(current_scenario['oil_price'], 180) / 180) * 100
-    fric_n = (min(current_scenario['port_friction'], 5.0) / 5.0) * 100
-    conf_n = global_conflict_avg # Already 0-100
-
-    stability_score = round((oil_n * w_energy) + (fric_n * w_logistics) + (conf_n * w_conflict), 2)
-    
-    print(f"🌍 GEOPOLITICAL Intel: Global Conflict baseline at {global_conflict_avg:.2f}%")
+        # Consensus Conflict Score (Average of both)
+        global_conflict_avg = (acled_score + ucdp_score) / 2
+        
+        print(f"🌍 GEOPOLITICAL Intel: Consensus Risk (ACLED+UCDP) at {global_conflict_avg:.2f}%")
+    except Exception as e:
+        print(f"⚠️ Geopolitical Load Warning: {e}")
+        global_conflict_avg = 0.5 # Fallback
 
     # 8. Map Generation Setup
     file_suffix = now.strftime("%H%M") 
