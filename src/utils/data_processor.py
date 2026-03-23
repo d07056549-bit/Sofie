@@ -52,6 +52,20 @@ class SofieDataEngine:
 
         return at_risk
 
+    def get_port_friction_map(self):
+        """
+        Returns the processed port data for the visualizer.
+        """
+        # If we already ran run_all, we use that data. 
+        # If not, we run a quick scan.
+        if hasattr(self, 'last_port_map'):
+            return self.last_port_map
+        
+        # Fallback: Run the processor once to build the map
+        results = self.run_all()
+        self.last_port_map = results.get('port_map', {})
+        return self.last_port_map
+
     def run_all(self):
         print(">>> ENGINE STARTING: Processing Maritime Streams...")
         
@@ -88,6 +102,9 @@ class SofieDataEngine:
             print(f"❌ MARITIME SENSOR: Missing at {self.maritime_path}")
 
         # --- CRITICAL: Ensure 'friction' is a FLOAT, not a DICT ---
+       
+        self.last_port_map = port_map
+        
         return {
             "alerts": self.get_live_port_alerts(),
             "friction": float(global_avg_friction),
