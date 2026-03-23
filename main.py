@@ -80,22 +80,19 @@ def main():
     # Now file_suffix exists and can be passed here:
     LogisticsMapper().generate_heatmap(friction_data, suffix=file_suffix)
 
-    # 7. Unified Dashboard Generation
-    # 1. Initialize the Engine and Visualizer
-    engine = DataEngine()
+   # 7. Unified Dashboard Generation
+    # 1. Fetch the Live Feed using the existing engine
+    live_alerts = data_engine.get_live_port_alerts() 
+    
+    # 2. Initialize the Visualizer
     visualizer = SofieVisualizer()
 
-    # 2. Fetch the Live Feed (The "Pulse")
-    print(">>> FETCHING LIVE MARITIME INTELLIGENCE...")
-    live_alerts = engine.get_live_port_alerts() 
-
-    # 3. Generate the Unified Dashboard
-    # This combines the CSV data, the News Risk, and the Live Feed
+    # 3. Generate the actual file
     visualizer.generate_unified_intel(
         score=stability_score, 
         at_risk=at_risk_list, 
-        friction=live_stats['port_map'],
-        alerts=live_alerts, 
+        friction=friction_data, # This is your Port CSV data
+        alerts=live_alerts,     # This is your Online News feed
         suffix=file_suffix
     )
     
