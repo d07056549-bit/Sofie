@@ -23,7 +23,7 @@ class SofieVisualizer:
         fig = plt.figure(figsize=(16, 11), facecolor='#121212')
         
         # --- PANEL A: GEOPOLITICAL RISK MAP (Top/Center) ---
-        ax1 = fig.add_axes([0.05, 0.45, 0.72, 0.45])
+        ax1 = fig.add_axes([0.05, 0.25, 0.70, 0.70])
         try:
             world = gpd.read_file(self.world_url)
             world.plot(ax=ax1, color='#DEE2E6', edgecolor='#ADB5BD', linewidth=0.5) 
@@ -37,7 +37,7 @@ class SofieVisualizer:
         ax1.set_axis_off()
 
         # --- PANEL B: MARITIME FRICTION NODES (Bottom Left) ---
-        ax2 = fig.add_axes([0.05, 0.1, 0.35, 0.3])
+        ax2 = fig.add_axes([0.05, 0.05, 0.20, 0.15])
         ax2.set_facecolor(bg_panel)
         # Draw the ports from your CSV data
         for port, data in friction.items():
@@ -50,7 +50,7 @@ class SofieVisualizer:
         ax2.grid(color='#CED4DA', alpha=0.3)
 
         # --- PANEL C: STABILITY INDEX GAUGE (Bottom Center) ---
-        ax3 = fig.add_axes([0.45, 0.1, 0.32, 0.3])
+        ax3 = fig.add_axes([0.30, 0.05, 0.45, 0.15])
         ax3.set_facecolor(bg_panel)
         color_gauge = '#28A745' if score < 40 else '#FFC107' if score < 70 else '#DC3545'
         ax3.barh(["STABILITY"], [100], color='#E9ECEF', height=0.4)
@@ -61,7 +61,7 @@ class SofieVisualizer:
         ax3.get_yaxis().set_visible(False)
 
         # --- PANEL D: LIVE PORT ALERTS (Sidebar) ---
-        ax4 = fig.add_axes([0.82, 0.05, 0.15, 0.9])
+        ax4 = fig.add_axes([0.78, 0.05, 0.18, 0.90])
         ax4.set_facecolor('#F8F9FA') # Clean light grey
         ax4.set_xticks([])
         ax4.set_yticks([])
