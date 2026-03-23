@@ -119,6 +119,10 @@ def main():
    # 9. Unified Dashboard Generation
     # 1. Fetch the Live Feed using the existing engine
     live_alerts = data_engine.get_live_port_alerts() 
+
+    print(f"DEBUG: Found {len(live_alerts)} live alerts.")
+    if len(live_alerts) > 0:
+        print(f"DEBUG: First alert title: {live_alerts[0]['title']}")
     
     # 2. Initialize the Visualizer
     visualizer = SofieVisualizer()
