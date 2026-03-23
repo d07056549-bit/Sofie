@@ -76,6 +76,9 @@ def main():
     # 3. GEOPOLITICAL NEXUS (The "Quad-Risk": ACLED + GDELT + GPR + EM-DAT)
     global_conflict_avg = 28.5
     tension_map_data = {}
+    from src.utils.migration_engine import MigrationEngine
+    mig_engine = MigrationEngine()
+    displacement_map = mig_engine.get_displacement_risk()
 
     try:
         # A. LOAD HISTORICAL MEMORY (GDELT)
