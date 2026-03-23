@@ -90,6 +90,14 @@ class SofieVisualizer:
         ax4.set_facecolor(bg_panel)
         y_pos = 0.8
         ax4.text(0.05, 0.9, "ACTIVE STRATEGIC ALERTS:", color=accent_color, fontsize=12, fontweight='bold')
+
+# Check for high displacement in the top 5 risk countries
+        if displacement_map:
+            # Sort for highest displacement
+            top_displacement = sorted(displacement_map.items(), key=lambda x: x[1], reverse=True)[:1]
+            for country, score in top_displacement:
+                if score > 0.8:
+                    alerts.append(f"HUMANITARIAN CRITICAL: Mass displacement surge in {country}")
         
         if alerts and isinstance(alerts, list):
             for alert in alerts[:4]:
