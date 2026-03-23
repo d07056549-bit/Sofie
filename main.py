@@ -168,14 +168,33 @@ def main():
         def calculate_nexus(row, displacement_map):
     """
     Calculates the 2026 Quad-Nexus Score by balancing:
-    1. Hazard Index (ACLED Conflict Data) - 40%
-    2. Sentiment Score (Market/News Tone) - 30%
-    3. Displacement Pressure (Refugee/IDP Flows) - 30%
+    1. Hazard Index (Conflict Data) - 40%
+    2. Sentiment Score (Market/News) - 30%
+    3. Displacement Pressure (Migration) - 30%
     """
-    
-    # 1. Conflict Pillar (0.0 to 1.0)
-    # ACLED Hazard Index usually ranges 0-1
+    # 1. Extract Conflict Data
     hazard = float(row.get('HAZARD_INDEX', 0))
+    
+    # 2. Extract Sentiment (Absolute value for intensity)
+    sentiment = abs(float(row.get('SENTIMENT_SCORE', 0)))
+    
+    # 3. Extract Humanitarian Displacement
+    # We check by Country name or ISO
+    country_name = row.get('COUNTRY', 'Global')
+    displacement = float(displacement_map.get(country_name, 0))
+    
+    # --- WEIGHTED CALCULATION ---
+    # 0.4 Hazard + 0.3 Sentiment + 0.3 Displacement
+    nexus_base = (hazard * 0.4) + (sentiment * 0.3) + (displacement * 0.3)
+    
+    # Scale to 0-100%
+    nexus_score = nexus_base * 100
+    
+    # 4. Crisis Force Multiplier: High conflict + High displacement = Systemic Failure
+    if hazard > 0.7 and displacement > 0.7:
+        nexus_score = min(100.0, nexus_score * 1.1)
+        
+    return round(nexus_score, 2)
     
     # 2. Sentiment Pillar (0.0 to 1.0)
     # We take the absolute value because both extreme negative (-1) 
