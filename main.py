@@ -5,8 +5,6 @@ from datetime import datetime
 
 # Import custom intelligence modules
 from src.utils.visualizer import SofieVisualizer
-from src.utils.mapper import SofieMapper
-from src.utils.logistics_mapper import LogisticsMapper
 from src.utils.data_processor import SofieDataEngine
 
 def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
@@ -21,7 +19,7 @@ def record_history(score, scenario_name, output_path=r"C:\Users\Empok\Documents\
     print(f"📊 HISTORICAL LOG UPDATED: {history_file}")
 
 def main():
-    # Setup Time and Args at the very start
+    # 1. Initialize Time and Arguments
     now = datetime.now()
     file_suffix = now.strftime("%H%M")
     live_date = now.strftime("%B %d, %Y")
@@ -37,70 +35,62 @@ def main():
     print(f"DATE: {live_date} | TIME: {live_time} GMT")
     print("="*55 + "\n")
 
-    # 1. Initialize Engine
+    # 2. Data Ingestion
     data_engine = SofieDataEngine(root_dir="Data/raw")
     live_stats = data_engine.run_all()
     
-    # 2. Geopolitical Intel (With NaN Protection)
+    # 3. Geopolitical Consensus (ACLED + UCDP)
     try:
-        # Load ACLED
         acled_df = pd.read_csv("Data/processed/acled_risk_indices.csv")
         acled_df.columns = [c.upper() for c in acled_df.columns]
-        # Use 2026 if exists, else use the most recent year in the file
-        latest_year_acled = acled_df['YEAR'].max()
-        acled_score = acled_df[acled_df['YEAR'] == latest_year_acled]['CONFLICT_INDEX'].mean()
+        latest_acled = acled_df['YEAR'].max()
+        acled_score = acled_df[acled_df['YEAR'] == latest_acled]['CONFLICT_INDEX'].mean()
 
-        # Load UCDP
         ucdp_df = pd.read_csv("Data/processed/ucdp_risk_indices.csv")
         ucdp_df.columns = [c.upper() for c in ucdp_df.columns]
-        latest_year_ucdp = ucdp_df['YEAR'].max()
-        ucdp_score = ucdp_df[ucdp_df['YEAR'] == latest_year_ucdp]['UCDP_RISK_INDEX'].mean()
+        latest_ucdp = ucdp_df['YEAR'].max()
+        ucdp_score = ucdp_df[ucdp_df['YEAR'] == latest_ucdp]['UCDP_RISK_INDEX'].mean()
 
         global_conflict_avg = (acled_score + ucdp_score) / 2
-        
-        if pd.isna(global_conflict_avg):
-            global_conflict_avg = 0.47
-            
         print(f"🌍 GEOPOLITICAL Intel: Consensus Risk (ACLED+UCDP) at {global_conflict_avg:.2f}%")
-    except Exception as e:
-        print(f"⚠️ Geopolitical Load Warning: {e}")
+    except Exception:
         global_conflict_avg = 0.47 
 
-    # 3. Scenario Logic
+    # 4. Scenario Logic
     scenarios = {
         'baseline': {'oil_price': 112.19, 'port_friction': live_stats['friction'], 'conflict': global_conflict_avg},
         'peace': {'oil_price': 72.50, 'port_friction': 1.0, 'conflict': 0.05},
-        'blackout': {'oil_price': 185.00, 'port_friction': 5.0, 'conflict': global_conflict_avg * 2},
-        'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'conflict': global_conflict_avg * 1.5}
+        'blackout': {'oil_price': 185.00, 'port_friction': 5.0, 'conflict': global_conflict_avg * 2.5},
+        'ultimatum_expires': {'oil_price': 145.20, 'port_friction': 3.5, 'conflict': global_conflict_avg * 1.8}
     }
     current = scenarios.get(args.scenario, scenarios['baseline'])
 
-    # 4. Final Stability Calculation
+    # 5. Stability Calculation
     oil_n = (min(current['oil_price'], 180) / 180) * 100
     fric_n = (min(current['port_friction'], 5.0) / 5.0) * 100
-    conf_n = current['conflict']
-    stability_score = round((oil_n * 0.3) + (fric_n * 0.2) + (conf_n * 0.5), 2)
+    stability_score = round((oil_n * 0.3) + (fric_n * 0.2) + (current['conflict'] * 0.5), 2)
 
-    # 5. Visuals & Logs
-    live_alerts = data_engine.get_live_port_alerts() 
-    at_risk_list = data_engine.get_at_risk_countries()
-    friction_data = data_engine.get_port_friction_map()
-
+    # 6. Dashboard Generation
     visualizer = SofieVisualizer()
     visualizer.generate_unified_intel(
-        score=stability_score, at_risk=at_risk_list, friction=friction_data, 
-        alerts=live_alerts, suffix=file_suffix
+        score=stability_score, 
+        at_risk=data_engine.get_at_risk_countries(), 
+        friction=data_engine.get_port_friction_map(), 
+        alerts=data_engine.get_live_port_alerts(), 
+        suffix=file_suffix
     )
     
+    # 7. Final Logs
     record_history(stability_score, args.scenario)
 
     print("="*55)
     print(f"--- SITREP SUMMARY: {live_date.upper()} ---") 
-    status = "CRITICAL WATCH" if stability_score > 75 else "STABLE"
+    status = "CRITICAL" if stability_score > 70 else "STABLE"
     print(f"STATUS: {status}. Stability Index: {stability_score}%")
     print("="*55)
     print("--- RUN COMPLETE ---\n")
 
+# --- START ENGINE ---
 if __name__ == "__main__":
     main()
 
