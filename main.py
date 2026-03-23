@@ -1,38 +1,42 @@
 import sys
 import os
+import importlib.util
 import pandas as pd
 import argparse
 
-# --- THE AGGRESSIVE PATH FIX ---
-# This forces Python to look at the 'src' folder directly
+# --- 1. FORCE MANUAL LOADING ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(BASE_DIR, 'src'))
-sys.path.append(os.path.join(BASE_DIR, 'src', 'utils'))
 
-# --- ATTEMPT DIRECT IMPORTS ---
+def import_module_manually(name, folder):
+    path = os.path.join(BASE_DIR, "src", folder, f"{name}.py")
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 try:
-    # Try importing directly from the utils folder
-    from data_engine import DataEngine
-    from visualizer import Visualizer
-    print("✅ System Core: Loaded (Direct Access)")
-except ImportError:
-    try:
-        # Fallback to standard src path
-        from src.utils.data_engine import DataEngine
-        from src.utils.visualizer import Visualizer
-        print("✅ System Core: Loaded (Standard Path)")
-    except ImportError as e:
-        print(f"❌ Module Error: {e}")
-        print(f"\nDEBUG: Project is at {BASE_DIR}")
-        sys.exit(1)
+    # Manually load the classes from the files
+    de_mod = import_module_manually("data_engine", "utils")
+    vi_mod = import_module_manually("visualizer", "utils")
+    
+    DataEngine = de_mod.DataEngine
+    Visualizer = vi_mod.Visualizer
+    print("✅ System Core: Loaded (Direct File Injection)")
+except Exception as e:
+    print(f"❌ Structural Error: {e}")
+    print(f"Check that 'src/utils/data_engine.py' exists at: {os.path.join(BASE_DIR, 'src', 'utils')}")
+    sys.exit(1)
 
+# --- 2. NEXUS LOGIC ---
 def calculate_nexus(row):
-    """50% Conflict + 50% Sentiment"""
-    h = float(row.get('HAZARD_INDEX', 0))
-    s = abs(float(row.get('SENTIMENT_SCORE', 0)))
-    return round(((h * 0.5) + (s * 0.5)) * 100, 2)
+    try:
+        h = float(row.get('HAZARD_INDEX', 0))
+        s = abs(float(row.get('SENTIMENT_SCORE', 0)))
+        return round(((h * 0.5) + (s * 0.5)) * 100, 2)
+    except:
+        return 0.0
 
+# --- 3. MAIN LOOP ---
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scenario', default='baseline')
@@ -40,41 +44,37 @@ def main():
 
     print(f"\n--- SOFIE EVOLVED v2.0 | SCENARIO: {args.scenario.upper()} ---")
     
-    # Path to your processed ACLED data
     data_file = os.path.join(BASE_DIR, "Data", "processed", "acled_risk_indices.csv")
     
     if not os.path.exists(data_file):
         print(f"❌ Data Missing: {data_file}")
         return
 
-    # Initialize Engines
     engine = DataEngine()
     viz = Visualizer()
     
     try:
-        # Load and Clean
         df = pd.read_csv(data_file)
         df.columns = [c.upper() for c in df.columns]
         
-        # Filter for 2026 Baseline
+        # Filter for 2026
         current = df[df['YEAR'] == 2026].copy()
         current['NEXUS_SCORE'] = current.apply(calculate_nexus, axis=1)
         
-        # Prepare Visuals
-        # If your CSV uses 'COUNTRY' instead of 'ISO', this handles both
+        # Prepare Map
         map_key = 'ISO' if 'ISO' in current.columns else 'COUNTRY'
         risk_map = current.set_index(map_key)['NEXUS_SCORE'].to_dict()
         
         avg_risk = current['NEXUS_SCORE'].mean()
         stability = max(0, 100 - (avg_risk * 1.2))
 
-        # Generate the PNG Sitrep
+        # Generate Sitrep
         path = viz.generate_unified_intel(
             score=stability,
             at_risk=risk_map,
             friction=engine.get_port_friction_map(),
             alerts=engine.get_live_port_alerts(),
-            suffix="restore_fix"
+            suffix="final_restore"
         )
         
         print(f"=======================================================")
@@ -83,9 +83,7 @@ def main():
         print(f"=======================================================")
 
     except Exception as e:
-        print(f"❌ Runtime Error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Execution Error: {e}")
 
 if __name__ == "__main__":
     main()
