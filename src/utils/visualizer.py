@@ -122,4 +122,3 @@ def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         except Exception as e:
             print(f"⚠️ Tension Engine Error: {e}")
             return None
-
