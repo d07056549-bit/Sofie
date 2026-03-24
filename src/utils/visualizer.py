@@ -71,56 +71,52 @@ class SofieVisualizer:
 
     # --- NEW INTERACTIVE METHOD ---
     def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        if not INTERACTIVE_READY:
-            return None
         try:
-            # 1. Use the built-in HoloViews projector (no Cartopy needed)
-            from holoviews.util.transform import lon_lat_to_easting_northing
-            import pandas as pd
-            import holoviews as hv
-
-            # 2. Prepare and Project the Data
-            f_data = []
-            for port, info in friction.items():
-                try:
-                    lon = float(info.get('lon', 0))
-                    lat = float(info.get('lat', 0))
-                    
-                    # Convert to Easting/Northing (Meters)
-                    e, n = lon_lat_to_easting_northing(lon, lat)
-                    
-                    f_data.append({
-                        'Port': port,
-                        'x': e,
-                        'y': n,
-                        'friction': float(info.get('friction', 1.0))
-                    })
-                except: continue
+            import folium
+            from folium.plugins import MousePosition
             
-            df = pd.DataFrame(f_data)
-
-            # 3. Create the Tiles and Points separately, then overlay them
-            # This 'manual' overlay is the most stable way to avoid errors
-            tiles = hv.element.tiles.CartoDark().opts(width=1000, height=600)
-            
-            points = hv.Points(df, kdims=['x', 'y'], vdims=['Port', 'friction']).opts(
-                color='friction',
-                cmap='hot',
-                size=hv.dim('friction') * 12,
-                tools=['hover'],
-                title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
+            # 1. Initialize a Global Map with a Dark Theme
+            # No manual coordinate math needed - Folium handles Lat/Lon natively
+            m = folium.Map(
+                location=[20, 0], 
+                zoom_start=2, 
+                tiles='CartoDB dark_matter',
+                control_scale=True
             )
 
-            # Overlay them (the '*' operator)
-            combined_plot = (tiles * points)
-            
-            # 4. Save
+            # 2. Add Maritime Nodes (The 803 ports)
+            for port, info in friction.items():
+                try:
+                    lat = float(info.get('lat', 0))
+                    lon = float(info.get('lon', 0))
+                    f_val = float(info.get('friction', 1.0))
+
+                    # Determine color based on friction score
+                    # Green for low friction, Red for high ($200 oil)
+                    dot_color = '#00FF41' if f_val <= 1.1 else '#FF4B4B' if f_val >= 1.5 else '#FFA500'
+
+                    folium.CircleMarker(
+                        location=[lat, lon],
+                        radius=f_val * 4, # Scale size by friction
+                        color=dot_color,
+                        fill=True,
+                        fill_color=dot_color,
+                        fill_opacity=0.7,
+                        popup=f"Port: {port}<br>Friction: {f_val:.2f}",
+                        tooltip=port
+                    ).add_to(m)
+                except: continue
+
+            # 3. Add a coordinate helper to the bottom right
+            MousePosition().add_to(m)
+
+            # 4. Save to HTML
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
-            hv.save(combined_plot, html_path)
+            m.save(html_path)
             
-            print(f"✅ INTERACTIVE DASHBOARD FIXED (Manual Projector): {html_path}")
+            print(f"✅ SYSTEM SWAP SUCCESSFUL: {html_path} (Folium Engine)")
             return html_path
 
         except Exception as e:
-            print(f"⚠️ Interactive Engine Error: {e}")
+            print(f"⚠️ Folium Engine Error: {e}")
             return None
