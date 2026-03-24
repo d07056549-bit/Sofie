@@ -71,7 +71,7 @@ class SofieVisualizer:
         plt.close()
         return save_path
 
-def generate_interactive_nexus(self, at_risk, friction, suffix=""):
+    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         """Generates a Folium-based HeatMap focusing on global tension zones."""
         try:
             import folium
