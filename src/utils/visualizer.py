@@ -71,63 +71,56 @@ class SofieVisualizer:
 
     # --- NEW INTERACTIVE METHOD ---
     def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates the HoloViews HTML Dashboard."""
         if not INTERACTIVE_READY:
             return None
         try:
-            f_data = [{'Port': p, 'lat': float(i.get('lat', 0)), 'lon': float(i.get('lon', 0)), 'friction': float(i.get('friction', 1.0))} 
-                      for p, i in friction.items()]
-            df = pd.DataFrame(f_data)
+            # 1. Coordinate Conversion Function (Degrees -> Meters)
+            import numpy as np
+            def to_mercator(lon, lat):
+                x = lon * 20037508.34 / 180
+                y = np.log(np.tan((90 + lat) * np.pi / 360)) / (np.pi / 180)
+                y = y * 20037508.34 / 180
+                return x, y
 
-            plot = df.hvplot.points(
-                x='lon', y='lat', c='friction', cmap='hot',
-                size=hv.dim('friction') * 15, hover_cols=['Port', 'friction'],
-                tiles='CartoDark', width=1000, height=600,
-                title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
-            )
-            
-            html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
-            hv.save(plot, html_path)
-            print(f"✅ INTERACTIVE DASHBOARD: {html_path}")
-            return html_path
-        except Exception as e:
-            print(f"⚠️ Interactive Engine Error: {e}")
-            return None
-# --- FIX: Added 'at_risk' back to the arguments ---
-    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates the HoloViews HTML Dashboard."""
-        if not INTERACTIVE_READY:
-            return None
-        try:
-            # We convert the friction dictionary to a list of dicts for plotting
+            # 2. Prepare and Project Maritime Data
             f_data = []
             for port, info in friction.items():
-                f_data.append({
-                    'Port': port, 
-                    'lat': float(info.get('lat', 0)), 
-                    'lon': float(info.get('lon', 0)), 
-                    'friction': float(info.get('friction', 1.0))
-                })
+                try:
+                    lon = float(info.get('lon', 0))
+                    lat = float(info.get('lat', 0))
+                    # CONVERT HERE
+                    mx, my = to_mercator(lon, lat)
+                    
+                    f_data.append({
+                        'Port': port,
+                        'x': mx, # Use meters for X
+                        'y': my, # Use meters for Y
+                        'friction': float(info.get('friction', 1.0))
+                    })
+                except: continue
+            
             df = pd.DataFrame(f_data)
 
-            # Generate the plot
+            # 3. Generate Plot using projected coordinates
             plot = df.hvplot.points(
-                x='lon', y='lat', 
+                x='x', y='y', # Use the new mercator columns
                 c='friction', 
                 cmap='hot',
-                size=hv.dim('friction') * 15, 
+                size=hv.dim('friction') * 15,
                 hover_cols=['Port', 'friction'],
                 tiles='CartoDark', 
                 width=1000, height=600,
                 title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
+            ).opts(
+                # Ensure the axis doesn't show raw meter numbers
+                xaxis=None, yaxis=None 
             )
             
-            # Save the file
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
             hv.save(plot, html_path)
-            
-            print(f"✅ INTERACTIVE DASHBOARD: {html_path}")
+            print(f"✅ INTERACTIVE DASHBOARD FIXED: {html_path}")
             return html_path
+
         except Exception as e:
             print(f"⚠️ Interactive Engine Error: {e}")
             return None
