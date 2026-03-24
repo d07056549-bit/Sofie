@@ -72,51 +72,43 @@ class SofieVisualizer:
         return save_path
 
     def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates a Folium-based HeatMap focusing on global tension zones."""
+        """Generates a HeatMap by searching for any valid coordinate keys."""
         try:
             import folium
             from folium.plugins import HeatMap
             import os
 
-            # 1. Initialize Map
-            m = folium.Map(
-                location=[20, 0], 
-                zoom_start=2, 
-                tiles='CartoDB dark_matter'
-            )
-
-            # 2. Process at_risk data into HeatMap format
+            m = folium.Map(location=[20, 0], zoom_start=2, tiles='CartoDB dark_matter')
             heat_data = []
+
             if isinstance(at_risk, dict):
                 for region, data in at_risk.items():
-                    try:
-                        lat = float(data.get('lat', 0))
-                        lon = float(data.get('lon', 0))
-                        weight = float(data.get('risk_score', 1.0))
-                        # Only add if it has valid coordinates
-                        if lat != 0 or lon != 0:
-                            heat_data.append([lat, lon, weight])
-                    except:
-                        continue
+                    # 1. Flexible key searching for Coordinates
+                    lat = data.get('lat') or data.get('latitude') or data.get('y')
+                    lon = data.get('lon') or data.get('longitude') or data.get('x')
+                    
+                    # 2. Flexible key searching for Tension Score
+                    weight = data.get('risk_score') or data.get('tension') or data.get('friction') or 1.0
 
-            # 3. Add the HeatMap layer (The "Glow")
+                    if lat is not None and lon is not None:
+                        heat_data.append([float(lat), float(lon), float(weight)])
+
+            # Debugging: Tell us if we actually found data
+            print(f"📊 Tension Map Debug: Processing {len(heat_data)} regions...")
+
             if heat_data:
                 HeatMap(
                     data=heat_data,
-                    radius=25, 
+                    radius=30, 
                     blur=15, 
                     min_opacity=0.3,
-                    gradient={0.4: 'blue', 0.65: 'lime', 1: 'red'}
+                    gradient={0.4: 'blue', 0.6: 'lime', 1: 'red'}
                 ).add_to(m)
+            else:
+                print("⚠️ WARNING: No valid coordinates found in 'at_risk' data!")
 
-            # 4. Save the HTML file
-            if not os.path.exists(self.output_path):
-                os.makedirs(self.output_path)
-                
             html_path = os.path.join(self.output_path, f"TENSION_MAP_{suffix}.html")
             m.save(html_path)
-            
-            print(f"✅ TENSION MAP GENERATED: {html_path}")
             return html_path
 
         except Exception as e:
