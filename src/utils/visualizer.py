@@ -73,34 +73,33 @@ class SofieVisualizer:
 
     # --- NEW INTERACTIVE METHOD ---
    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
+        """Generates a Folium-based HeatMap focusing on global tension zones."""
         try:
             import folium
             from folium.plugins import HeatMap
             import os
 
-            # 1. Initialize Map (Dark theme)
-            # Folium handles Lat/Lon natively, preventing the "Null Island" collapse
+            # 1. Initialize Map with Dark Matter tiles
             m = folium.Map(
                 location=[20, 0], 
                 zoom_start=2, 
                 tiles='CartoDB dark_matter'
             )
 
-            # 2. Prepare Tension Data
-            # We use at_risk (tension_map_data) instead of port friction
+            # 2. Process at_risk data into HeatMap format
+            # Format: [[lat, lon, weight], ...]
             heat_data = []
             for region, data in at_risk.items():
                 try:
                     lat = float(data.get('lat', 0))
                     lon = float(data.get('lon', 0))
-                    # Use 'risk_score' or 'tension' to weight the heat
+                    # Weight the 'glow' by the risk score
                     weight = float(data.get('risk_score', 1.0))
-                    
                     heat_data.append([lat, lon, weight])
-                except: continue
+                except:
+                    continue
 
-            # 3. Add the HeatMap Layer
-            # This visualizes the clusters of tension seen in your previous runs
+            # 3. Add the HeatMap layer
             if heat_data:
                 HeatMap(
                     data=heat_data,
@@ -110,7 +109,7 @@ class SofieVisualizer:
                     gradient={0.4: 'blue', 0.65: 'lime', 1: 'red'}
                 ).add_to(m)
 
-            # 4. Save to HTML
+            # 4. Save the HTML file
             html_path = os.path.join(self.output_path, f"TENSION_MAP_{suffix}.html")
             m.save(html_path)
             
