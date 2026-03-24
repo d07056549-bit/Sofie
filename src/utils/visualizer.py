@@ -76,12 +76,11 @@ class SofieVisualizer:
             from folium.plugins import MousePosition
             
             # 1. Initialize a Global Map with a Dark Theme
-            # No manual coordinate math needed - Folium handles Lat/Lon natively
+            # Folium uses Lat/Lon natively - no more manual math!
             m = folium.Map(
                 location=[20, 0], 
                 zoom_start=2, 
-                tiles='CartoDB dark_matter',
-                control_scale=True
+                tiles='CartoDB dark_matter'
             )
 
             # 2. Add Maritime Nodes (The 803 ports)
@@ -91,13 +90,12 @@ class SofieVisualizer:
                     lon = float(info.get('lon', 0))
                     f_val = float(info.get('friction', 1.0))
 
-                    # Determine color based on friction score
-                    # Green for low friction, Red for high ($200 oil)
+                    # Logic: Red dots for high-friction ($200 oil), Green for stable
                     dot_color = '#00FF41' if f_val <= 1.1 else '#FF4B4B' if f_val >= 1.5 else '#FFA500'
 
                     folium.CircleMarker(
                         location=[lat, lon],
-                        radius=f_val * 4, # Scale size by friction
+                        radius=f_val * 4, 
                         color=dot_color,
                         fill=True,
                         fill_color=dot_color,
@@ -107,10 +105,7 @@ class SofieVisualizer:
                     ).add_to(m)
                 except: continue
 
-            # 3. Add a coordinate helper to the bottom right
-            MousePosition().add_to(m)
-
-            # 4. Save to HTML
+            # 3. Save to HTML
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
             m.save(html_path)
             
