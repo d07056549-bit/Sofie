@@ -80,6 +80,7 @@ class SofieVisualizer:
             import os
 
             # 1. Initialize Map with Dark Matter tiles
+            # Folium handles Lat/Lon naturally, fixing the "one dot" error
             m = folium.Map(
                 location=[20, 0], 
                 zoom_start=2, 
@@ -87,7 +88,6 @@ class SofieVisualizer:
             )
 
             # 2. Process at_risk data into HeatMap format
-            # Format: [[lat, lon, weight], ...]
             heat_data = []
             for region, data in at_risk.items():
                 try:
