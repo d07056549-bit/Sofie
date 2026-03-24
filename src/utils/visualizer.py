@@ -74,55 +74,51 @@ class SofieVisualizer:
         if not INTERACTIVE_READY:
             return None
         try:
-            import numpy as np
+            # 1. Use the built-in HoloViews projector (no Cartopy needed)
+            from holoviews.util.transform import lon_lat_to_easting_northing
+            import pandas as pd
+            import holoviews as hv
 
-            # 1. Manual Projection Function (Degrees to Meters)
-            def to_mercator(lon, lat):
-                # Standard Web Mercator projection used by OpenStreetMap/Carto
-                x = lon * 20037508.34 / 180
-                y = np.log(np.tan((90 + lat) * np.pi / 360)) / (np.pi / 180)
-                y = y * 20037508.34 / 180
-                return x, y
-
-            # 2. Prepare Data with projected coordinates
+            # 2. Prepare and Project the Data
             f_data = []
             for port, info in friction.items():
                 try:
                     lon = float(info.get('lon', 0))
                     lat = float(info.get('lat', 0))
                     
-                    # Transform coordinates to meters
-                    mx, my = to_mercator(lon, lat)
+                    # Convert to Easting/Northing (Meters)
+                    e, n = lon_lat_to_easting_northing(lon, lat)
                     
                     f_data.append({
                         'Port': port,
-                        'x': mx, # Projected Easting
-                        'y': my, # Projected Northing
+                        'x': e,
+                        'y': n,
                         'friction': float(info.get('friction', 1.0))
                     })
                 except: continue
             
             df = pd.DataFrame(f_data)
 
-            # 3. Plot without 'geo=True' to bypass the geoviews requirement
-            plot = df.hvplot.points(
-                x='x', y='y',
-                geo=False,            # <-- Set to False to avoid Geoviews error
-                tiles='CartoDark',    # <-- The tiles will now match our 'x' and 'y'
-                c='friction', 
-                cmap='hot',
-                size=hv.dim('friction') * 15,
-                hover_cols=['Port', 'friction'],
-                width=1000, height=600,
-                title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
-            ).opts(
-                # Hide the meter-based axes to keep the "Map" look
-                xaxis=None, yaxis=None
-            )
+            # 3. Create the Tiles and Points separately, then overlay them
+            # This 'manual' overlay is the most stable way to avoid errors
+            tiles = hv.element.tiles.CartoDark().opts(width=1000, height=600)
             
+            points = hv.Points(df, kdims=['x', 'y'], vdims=['Port', 'friction']).opts(
+                color='friction',
+                cmap='hot',
+                size=hv.dim('friction') * 12,
+                tools=['hover'],
+                title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
+            )
+
+            # Overlay them (the '*' operator)
+            combined_plot = (tiles * points)
+            
+            # 4. Save
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
-            hv.save(plot, html_path)
-            print(f"✅ INTERACTIVE MAP FIXED (No Geoviews Needed): {html_path}")
+            hv.save(combined_plot, html_path)
+            
+            print(f"✅ INTERACTIVE DASHBOARD FIXED (Manual Projector): {html_path}")
             return html_path
 
         except Exception as e:
