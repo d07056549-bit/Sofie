@@ -3,6 +3,8 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import folium
+from folium.plugins import HeatMap
 
 # --- SAFE INTERACTIVE IMPORTS ---
 try:
