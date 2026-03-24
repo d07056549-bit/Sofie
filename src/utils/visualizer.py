@@ -93,12 +93,13 @@ def generate_interactive_nexus(self, at_risk, friction, suffix=""):
                         lat = float(data.get('lat', 0))
                         lon = float(data.get('lon', 0))
                         weight = float(data.get('risk_score', 1.0))
+                        # Only add if it has valid coordinates
                         if lat != 0 or lon != 0:
                             heat_data.append([lat, lon, weight])
                     except:
                         continue
 
-            # 3. Add the HeatMap layer
+            # 3. Add the HeatMap layer (The "Glow")
             if heat_data:
                 HeatMap(
                     data=heat_data,
@@ -109,6 +110,9 @@ def generate_interactive_nexus(self, at_risk, friction, suffix=""):
                 ).add_to(m)
 
             # 4. Save the HTML file
+            if not os.path.exists(self.output_path):
+                os.makedirs(self.output_path)
+                
             html_path = os.path.join(self.output_path, f"TENSION_MAP_{suffix}.html")
             m.save(html_path)
             
@@ -118,3 +122,4 @@ def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         except Exception as e:
             print(f"⚠️ Tension Engine Error: {e}")
             return None
+
