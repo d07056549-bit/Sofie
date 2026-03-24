@@ -73,45 +73,57 @@ class SofieVisualizer:
     def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         try:
             import folium
-            from folium.plugins import MousePosition
-            
-            # 1. Initialize a Global Map with a Dark Theme
-            # Folium uses Lat/Lon natively - no more manual math!
+            from folium.plugins import HeatMap, MousePosition
+            import os
+
+            # 1. Initialize Map (Dark theme for 'Sitrep' feel)
+            # Folium uses [Lat, Lon] directly, fixing the "one dot" error
             m = folium.Map(
                 location=[20, 0], 
                 zoom_start=2, 
                 tiles='CartoDB dark_matter'
             )
 
-            # 2. Add Maritime Nodes (The 803 ports)
+            heat_data = []
+            
+            # 2. Add Individual Port Markers & Prep Heatmap Data
             for port, info in friction.items():
                 try:
                     lat = float(info.get('lat', 0))
                     lon = float(info.get('lon', 0))
                     f_val = float(info.get('friction', 1.0))
 
-                    # Logic: Red dots for high-friction ($200 oil), Green for stable
+                    # Color logic: Red for high friction ($200 oil), Green for stable
                     dot_color = '#00FF41' if f_val <= 1.1 else '#FF4B4B' if f_val >= 1.5 else '#FFA500'
 
+                    # Add to Heatmap list [Lat, Lon, Weight]
+                    heat_data.append([lat, lon, f_val])
+
+                    # Add individual port markers
                     folium.CircleMarker(
                         location=[lat, lon],
-                        radius=f_val * 4, 
+                        radius=f_val * 3,
                         color=dot_color,
                         fill=True,
-                        fill_color=dot_color,
-                        fill_opacity=0.7,
-                        popup=f"Port: {port}<br>Friction: {f_val:.2f}",
+                        fill_opacity=0.6,
+                        popup=f"<b>Port:</b> {port}<br><b>Friction:</b> {f_val:.2f}",
                         tooltip=port
                     ).add_to(m)
                 except: continue
 
-            # 3. Save to HTML
+            # 3. Add the HeatMap Layer
+            # This visualizes the "clusters" of maritime tension
+            HeatMap(heat_data, radius=15, blur=10, min_opacity=0.3).add_to(m)
+
+            # 4. Final Touches
+            MousePosition().add_to(m)
+            
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
             m.save(html_path)
             
-            print(f"✅ SYSTEM SWAP SUCCESSFUL: {html_path} (Folium Engine)")
+            print(f"✅ INTERACTIVE DASHBOARD READY: {html_path}")
             return html_path
 
         except Exception as e:
-            print(f"⚠️ Folium Engine Error: {e}")
+            print(f"⚠️ Folium Error: {e}")
             return None
