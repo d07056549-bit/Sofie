@@ -72,44 +72,41 @@ class SofieVisualizer:
         return save_path
 
     # --- NEW INTERACTIVE METHOD ---
-    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates a Tension HeatMap using Folium."""
+   def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         try:
             import folium
             from folium.plugins import HeatMap
             import os
 
-            # 1. Initialize Global Map (Dark Theme)
-            # Folium handles Lat/Lon naturally, preventing the "Null Island" collapse
+            # 1. Initialize Map (Dark theme)
+            # Folium handles Lat/Lon natively, preventing the "Null Island" collapse
             m = folium.Map(
                 location=[20, 0], 
                 zoom_start=2, 
                 tiles='CartoDB dark_matter'
             )
 
-            # 2. Process 'at_risk' Tension Data
-            # at_risk is usually a list of dicts: [{'lat': x, 'lon': y, 'tension': z}, ...]
+            # 2. Prepare Tension Data
+            # We use at_risk (tension_map_data) instead of port friction
             heat_data = []
-            
-            # If at_risk is a DataFrame, we iterate rows; if it's a list, we iterate directly
-            for entry in at_risk:
+            for region, data in at_risk.items():
                 try:
-                    lat = float(entry.get('lat', 0))
-                    lon = float(entry.get('lon', 0))
-                    # Weight the heatmap by the tension/risk score
-                    weight = float(entry.get('tension', 1.0)) 
+                    lat = float(data.get('lat', 0))
+                    lon = float(data.get('lon', 0))
+                    # Use 'risk_score' or 'tension' to weight the heat
+                    weight = float(data.get('risk_score', 1.0))
                     
                     heat_data.append([lat, lon, weight])
-                except (TypeError, ValueError):
-                    continue
+                except: continue
 
-            # 3. Add the Tension HeatMap Layer
+            # 3. Add the HeatMap Layer
+            # This visualizes the clusters of tension seen in your previous runs
             if heat_data:
                 HeatMap(
                     data=heat_data,
                     radius=25, 
                     blur=15, 
-                    min_opacity=0.2,
+                    min_opacity=0.3,
                     gradient={0.4: 'blue', 0.65: 'lime', 1: 'red'}
                 ).add_to(m)
 
