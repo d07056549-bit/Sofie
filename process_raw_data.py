@@ -9,10 +9,10 @@ os.makedirs(PROCESSED_ROOT, exist_ok=True)
 def process_file(input_path, output_path, folder_name, file_name):
     # Load CSV or Excel
     if file_name.endswith(".csv"):
-        try:
-    df = pd.read_csv(input_path, low_memory=False)
-except Exception:
-    df = pd.read_csv(input_path, encoding="latin1", low_memory=False)
+    try:
+        df = pd.read_csv(input_path, low_memory=False)
+    except Exception:
+        df = pd.read_csv(input_path, encoding="latin1", low_memory=False)
 
     elif file_name.endswith(".xlsx") or file_name.endswith(".xls"):
         df = pd.read_excel(input_path)
