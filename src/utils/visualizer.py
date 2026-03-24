@@ -74,45 +74,40 @@ class SofieVisualizer:
         if not INTERACTIVE_READY:
             return None
         try:
-            # 1. Coordinate Conversion (Degrees -> Web Mercator Meters)
-            import numpy as np
-            def to_mercator(lon, lat):
-                x = lon * 20037508.34 / 180
-                y = np.log(np.tan((90 + lat) * np.pi / 360)) / (np.pi / 180)
-                y = y * 20037508.34 / 180
-                return x, y
-
-            # 2. Process data with the new coordinates
+            # 1. Prepare simple Lat/Lon data (NO manual math needed)
             f_data = []
             for port, info in friction.items():
                 try:
-                    mx, my = to_mercator(float(info.get('lon', 0)), float(info.get('lat', 0)))
                     f_data.append({
                         'Port': port,
-                        'x': mx, 
-                        'y': my,
+                        'lat': float(info.get('lat', 0)),
+                        'lon': float(info.get('lon', 0)),
                         'friction': float(info.get('friction', 1.0))
                     })
                 except: continue
             
             df = pd.DataFrame(f_data)
 
-            # 3. Plot using projected 'x' and 'y'
+            # 2. Use 'geo=True' and 'tiles'. 
+            # hvPlot will auto-project these points to match the map!
             plot = df.hvplot.points(
-                x='x', y='y', # Meters, not degrees
-                c='friction', cmap='hot',
+                x='lon', y='lat',
+                geo=True,             # <--- This is the magic key
+                tiles='CartoDark',    # <--- This brings back the map
+                c='friction', 
+                cmap='hot',
                 size=hv.dim('friction') * 15,
                 hover_cols=['Port', 'friction'],
-                tiles='CartoDark', 
                 width=1000, height=600,
                 title=f"SOFIE INTERACTIVE NEXUS | {suffix}"
             )
             
-            # Save the file
             html_path = os.path.join(self.output_path, f"INTERACTIVE_NEXUS_{suffix}.html")
             hv.save(plot, html_path)
-            print(f"✅ DASHBOARD FIXED: {html_path}")
+            print(f"✅ INTERACTIVE MAP RESTORED: {html_path}")
             return html_path
+
         except Exception as e:
-            print(f"⚠️ Interactive Error: {e}")
+            print(f"⚠️ Interactive Engine Error: {e}")
+            # If geo=True fails because of an old version, fall back to basic
             return None
