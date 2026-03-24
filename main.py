@@ -221,8 +221,10 @@ def main():
     fric_n = (min(current['port_friction'], 5.0) / 5.0) * 100
     stability_score = round((oil_n * 0.3) + (fric_n * 0.2) + (current['conflict'] * 0.5), 2)
 
-    # 6. DASHBOARD
+   # 6. DASHBOARD
     visualizer = SofieVisualizer()
+    
+    # Static PNG (for reports)
     visualizer.generate_unified_intel(
         score=stability_score,
         at_risk=tension_map_data,
@@ -230,6 +232,13 @@ def main():
         alerts=data_engine.get_live_port_alerts(),
         suffix=file_suffix,
         displacement_map=displacement_map
+    )
+
+    # Interactive HTML (for analysis)
+    visualizer.generate_interactive_nexus(
+        at_risk=tension_map_data,
+        friction=data_engine.get_port_friction_map(),
+        suffix=file_suffix
     )
 
     # 7. LOGS & SUMMARY
