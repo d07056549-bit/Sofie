@@ -1,9 +1,9 @@
-import os
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import branca.colormap as cm
-from matplotlib.colors import LinearSegmentedColormap
+import holoviews as hv
+import hvplot.pandas  # This adds .hvplot() to your GeoDataFrames
+import geoviews as gv
+from holoviews import opts
+
+hv.extension('bokeh')
 
 class SofieVisualizer:
     def __init__(self, output_path=r"C:\Users\Empok\Documents\GitHub\Sofie\Data\exports"):
@@ -11,115 +11,50 @@ class SofieVisualizer:
         os.makedirs(self.output_path, exist_ok=True)
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
-    def generate_unified_intel(self, score, at_risk, friction, alerts, suffix="", displacement_map=None):
-        # Style Settings
-        plt.style.use('dark_background')
-        bg_panel = '#0A0A0A'
-        accent_color = '#00FF41'  # Matrix Green
-        text_color = '#E0E0E0'
-        
-        fig = plt.figure(figsize=(24, 14), facecolor='black')
-        
-        # --- PANEL A: GLOBAL RISK MAP (ISO-BASED) ---
-        ax1 = fig.add_axes([0.05, 0.25, 0.90, 0.70])
+    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
+        """Generates an interactive HTML dashboard using HoloViews."""
         try:
-            import geopandas as gpd
-            # Load map
-            world = gpd.read_file("https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip")
-            
-            # --- START ISO FIX ---
-            # Most Natural Earth files use 'ADM0_A3' or 'ISO_A3'
+            # 1. Load and Prepare Map Data
+            world = gpd.read_file(self.world_url)
             iso_col = 'ISO_A3' if 'ISO_A3' in world.columns else 'ADM0_A3'
-            
-            # We map the 'at_risk' dictionary (which now contains ISO codes) 
-            # to the map's ISO column.
             world['tension'] = world[iso_col].map(at_risk).fillna(0)
-            # --- END ISO FIX ---
-
-            world.plot(
-                column='tension',
-                ax=ax1,
-                cmap='RdYlGn_r', # Red for High Tension, Green for Low
-                linewidth=0.5,
-                edgecolor='0.2',
-                legend=False,
-                missing_kwds={'color': '#1A1A1A'} # Dark gray for countries with no data
-            )
-        except Exception as e:
-            ax1.text(0.5, 0.5, f"MAP SENSOR OFFLINE: {e}", ha='center', color='red')
-        
-        ax1.set_axis_off()
-        ax1.set_title(f"SOFIE | QUAD-NEXUS STRATEGIC OVERLAY", color=accent_color, fontsize=28, fontweight='bold', pad=20)
-
-        # --- PANEL B: MARITIME FRICTION NODES (Fixed & Robust) ---
-        ax2 = fig.add_axes([0.05, 0.05, 0.20, 0.15])
-        ax2.set_facecolor(bg_panel)
-        
-        # Plotting the ports
-        for port, data in friction.items():
-            try:
-                lon, lat = float(data.get('lon', 0)), float(data.get('lat', 0))
-                f_val = float(data.get('friction', 1.0))
-                
-                # Determine color based on friction level
-                p_color = '#DC3545' if f_val > 1.2 else '#28A745'
-                ax2.scatter(lon, lat, s=120, c=p_color, edgecolors='white', zorder=5)
-                
-                if f_val > 1.1: # Only label friction points
-                    ax2.text(lon + 3, lat, port.upper()[:10], fontsize=8, color=text_color, fontweight='bold')
-            except:
-                continue
-
-        ax2.set_xlim(-180, 180) # Force global scaling
-        ax2.set_ylim(-60, 85)
-        ax2.set_axis_off()
-        ax2.set_title("MARITIME FRICTION NODES", color=text_color, fontsize=14, fontweight='bold')
-
-        # --- PANEL C: STABILITY GAUGE ---
-        ax3 = fig.add_axes([0.30, 0.05, 0.30, 0.15])
-        ax3.set_facecolor(bg_panel)
-        # Create a simple gauge bar
-        ax3.barh(0, 100, color='#1A1A1A', height=0.4)
-        ax3.barh(0, score, color=accent_color, height=0.4)
-        ax3.text(50, 0, f"{score:.2f}%", ha='center', va='center', fontsize=30, color='black', fontweight='bold')
-        ax3.set_axis_off()
-        ax3.set_title("SYSTEM STABILITY INDEX", color=text_color, fontsize=14, fontweight='bold')
-
-        # --- PANEL D: LIVE ALERTS (Universal Data Fix) ---
-        ax4 = fig.add_axes([0.65, 0.05, 0.30, 0.15])
-        ax4.set_facecolor(bg_panel)
-        y_pos = 0.8
-        ax4.text(0.05, 0.9, "ACTIVE STRATEGIC ALERTS:", color=accent_color, fontsize=12, fontweight='bold')
-
-# Check for high displacement in the top 5 risk countries
-        if displacement_map:
-            # Sort for highest displacement
-            top_displacement = sorted(displacement_map.items(), key=lambda x: x[1], reverse=True)[:1]
-            for country, score in top_displacement:
-                if score > 0.8:
-                    alerts.append(f"HUMANITARIAN CRITICAL: Mass displacement surge in {country}")
-        
-        if alerts and isinstance(alerts, list):
-            for alert in alerts[:4]:
-                # 1. Extract text if it's a dictionary, otherwise force to string
-                if isinstance(alert, dict):
-                    # Try to find a 'message' or 'event' key, else just stringify the dict
-                    text = alert.get('message', alert.get('event', str(alert)))
-                else:
-                    text = str(alert)
-                
-                # 2. Safely slice the text for the display
-                display_text = text[:50] + "..." if len(text) > 50 else text
-                
-                ax4.text(0.05, y_pos, f"> {display_text}", color=text_color, fontsize=10, family='monospace')
-                y_pos -= 0.2
-        else:
-            ax4.text(0.05, 0.7, "> SENSORS SCANNING...", color=text_color, fontsize=10)
             
-        ax4.set_axis_off()
+            # 2. Create Interactive Choropleth
+            # hover_cols allows you to see the country name and score on mouse-over
+            map_plot = world.hvplot(
+                geo=True, 
+                c='tension', 
+                cmap='RdYlGn_r', 
+                hover_cols=['name', 'tension'],
+                title=f"SOFIE Interactive Risk Overlay ({suffix})",
+                alpha=0.7,
+                clim=(0, 1)
+            )
 
-        # Save output
-        save_path = f"Data/exports/COMMAND_SITREP_{suffix}.png"
-        plt.savefig(save_path, facecolor='black', edgecolor='none', dpi=100)
-        plt.close()
-        return save_path
+            # 3. Create Maritime Friction Points
+            # Convert friction dict to DataFrame for hvPlot
+            friction_df = pd.DataFrame.from_dict(friction, orient='index').reset_index()
+            friction_df.columns = ['Port', 'lat', 'lon', 'friction']
+            
+            points_plot = friction_df.hvplot.points(
+                x='lon', y='lat', 
+                geo=True, 
+                color='red', 
+                size=hv.dim('friction')*10, # Scale size by friction
+                hover_cols=['Port', 'friction']
+            )
+
+            # 4. Combine and Save
+            interactive_map = (map_plot * points_plot).opts(
+                opts.Polygons(width=900, height=500, bgcolor='black'),
+                opts.Points(tools=['hover'])
+            )
+            
+            html_path = f"Data/exports/INTERACTIVE_NEXUS_{suffix}.html"
+            hv.save(interactive_map, html_path)
+            print(f"✅ INTERACTIVE DASHBOARD: {html_path}")
+            return html_path
+
+        except Exception as e:
+            print(f"⚠️ HoloViews Engine Failure: {e}")
+            return None
