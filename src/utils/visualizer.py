@@ -70,7 +70,7 @@ class SofieVisualizer:
         return save_path
 
     # --- NEW INTERACTIVE METHOD ---
-    def generate_interactive_nexus(self, friction, suffix=""):
+    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         """Generates the HoloViews HTML Dashboard."""
         if not INTERACTIVE_READY:
             return None
