@@ -10,7 +10,7 @@ def process_file(input_path, output_path, folder_name, file_name):
     # Load CSV or Excel
     if file_name.endswith(".csv"):
         try:
-            df = pd.read_csv(input_path)
+            df = pd.read_csv(input_path, low_memory=False)
         except Exception:
             df = pd.read_csv(input_path, encoding="latin1")
 
