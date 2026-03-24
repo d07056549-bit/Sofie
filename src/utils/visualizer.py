@@ -1,7 +1,6 @@
 import holoviews as hv
-import hvplot.pandas  # This adds .hvplot() to your GeoDataFrames
-import geoviews as gv
-from holoviews import opts
+import hvplot.pandas
+import pandas as pd
 
 hv.extension('bokeh')
 
@@ -12,49 +11,45 @@ class SofieVisualizer:
         self.world_url = "https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.zip"
         
     def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates an interactive HTML dashboard using HoloViews."""
+        """
+        Cartopy-Free Interactive Dashboard.
+        Uses Bokeh + hvPlot for high-speed interactive mapping.
+        """
         try:
-            # 1. Load and Prepare Map Data
-            world = gpd.read_file(self.world_url)
-            iso_col = 'ISO_A3' if 'ISO_A3' in world.columns else 'ADM0_A3'
-            world['tension'] = world[iso_col].map(at_risk).fillna(0)
-            
-            # 2. Create Interactive Choropleth
-            # hover_cols allows you to see the country name and score on mouse-over
-            map_plot = world.hvplot(
-                geo=True, 
-                c='tension', 
-                cmap='RdYlGn_r', 
-                hover_cols=['name', 'tension'],
-                title=f"SOFIE Interactive Risk Overlay ({suffix})",
-                alpha=0.7,
-                clim=(0, 1)
+            # 1. Prepare Maritime Data for Plotting
+            # Convert friction dict to a DataFrame
+            f_data = []
+            for port, info in friction.items():
+                f_data.append({
+                    'Port': port,
+                    'lat': float(info.get('lat', 0)),
+                    'lon': float(info.get('lon', 0)),
+                    'friction': float(info.get('friction', 1.0))
+                })
+            df_friction = pd.DataFrame(f_data)
+
+            # 2. Create Interactive Scatter Plot (The 'Nodes')
+            # Since we can't use 'geo=True' without Cartopy, 
+            # we use a standard scatter with a 'tiles' background.
+            plot = df_friction.hvplot.points(
+                x='lon', y='lat',
+                c='friction',
+                cmap='hot',
+                size=hv.dim('friction') * 15,
+                hover_cols=['Port', 'friction'],
+                title=f"SOFIE | INTERACTIVE MARITIME NODES ({suffix})",
+                tiles='CartoDark', # This provides the world map background!
+                width=1000, height=600,
+                xlim=(-180, 180), ylim=(-60, 85)
             )
 
-            # 3. Create Maritime Friction Points
-            # Convert friction dict to DataFrame for hvPlot
-            friction_df = pd.DataFrame.from_dict(friction, orient='index').reset_index()
-            friction_df.columns = ['Port', 'lat', 'lon', 'friction']
-            
-            points_plot = friction_df.hvplot.points(
-                x='lon', y='lat', 
-                geo=True, 
-                color='red', 
-                size=hv.dim('friction')*10, # Scale size by friction
-                hover_cols=['Port', 'friction']
-            )
-
-            # 4. Combine and Save
-            interactive_map = (map_plot * points_plot).opts(
-                opts.Polygons(width=900, height=500, bgcolor='black'),
-                opts.Points(tools=['hover'])
-            )
-            
+            # 3. Save as HTML
             html_path = f"Data/exports/INTERACTIVE_NEXUS_{suffix}.html"
-            hv.save(interactive_map, html_path)
-            print(f"✅ INTERACTIVE DASHBOARD: {html_path}")
+            hv.save(plot, html_path)
+            
+            print(f"✅ INTERACTIVE DASHBOARD GENERATED (Cartopy-Free): {html_path}")
             return html_path
 
         except Exception as e:
-            print(f"⚠️ HoloViews Engine Failure: {e}")
+            print(f"⚠️ Interactive Engine Offline: {e}")
             return None
