@@ -34,51 +34,48 @@ region_map = {
 }
 
 # --- 4. DATA PREPARATION (Temporal) ---
-# We group data by Month to keep the map smooth
 df_monthly = df.resample('ME').mean(numeric_only=True)
 time_index = [d.strftime('%Y-%m') for d in df_monthly.index]
 
-# Prepare the data for HeatMapWithTime
-# Format: List of lists (one for each time step) containing [lat, lon, weight]
 master_heat_data = []
 
 for index, row in df_monthly.iterrows():
     step_data = []
     
-    # Calculate Oil Multiplier for "Future" dates (2024-2030)
+    # Projection logic for 2024+
     is_future = index.year >= 2024
     multiplier = (oil_price / 80) ** 1.5 if is_future else 1.0
     
     for col, coords in region_map.items():
         if col in row:
-            # We normalize the weight so it's visible but not overwhelming
             val = row[col]
-            if pd.isna(val): val = 0
-            
-            # Apply multiplier and scaling
-            weight = np.log1p(val * multiplier) 
-            if weight > 0.1:
-                step_data.append([coords[0], coords[1], float(weight)])
+            # Clean the data: skip NaNs or zeros
+            if pd.notna(val) and val > 0:
+                weight = float(np.log1p(val * multiplier))
+                step_data.append([coords[0], coords[1], weight])
     
+    # 🚨 THE FIX: If step_data is empty, add a "Ghost Point" 
+    # This prevents the IndexError by ensuring the list is never empty
+    if not step_data:
+        step_data.append([0.0, 0.0, 0.0])
+        
     master_heat_data.append(step_data)
 
-# --- 5. INTERACTIVE DASHBOARD ---
-st.title("🛰️ SOFIE: Temporal Tension Nexus")
-st.info("The map below shows historical conflict since 1980. After 2024, the engine projects tension based on your Oil Price target.")
-
-# Render the Time-Series Map
+# --- 5. RENDER ---
 m = folium.Map(location=[20, 0], zoom_start=2, tiles='CartoDB dark_matter')
 
-HeatMapWithTime(
-    data=master_heat_data,
-    index=time_index,
-    auto_play=False,
-    max_opacity=0.8,
-    radius=30,
-    use_local_extrema=True
-).add_to(m)
+# Add a check to ensure we actually have data before calling the plugin
+if master_heat_data:
+    HeatMapWithTime(
+        data=master_heat_data,
+        index=time_index,
+        auto_play=False,
+        max_opacity=0.7,
+        radius=25, # Slightly smaller for cleaner look
+        use_local_extrema=False # Set to False for consistent global scaling
+    ).add_to(m)
 
-st_folium(m, width=1200, height=650)
+st_folium(m, width=1200, height=650, key="sofie_timeline_map")
 
 # --- 6. MACRO METRICS ---
 col1, col2, col3 = st.columns(3)
