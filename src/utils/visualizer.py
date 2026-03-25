@@ -71,7 +71,7 @@ class SofieVisualizer:
         plt.close()
         return save_path
 
-    ddef generate_interactive_nexus(self, at_risk, friction, suffix=""):
+    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
         """
         Upgraded interactive engine. 
         Replaces static PNG logic with a dynamic Folium HeatMap.
