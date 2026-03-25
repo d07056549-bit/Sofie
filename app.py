@@ -69,6 +69,37 @@ with col2:
         st.write(f"**{region}:** Increase")
         st.progress(min(tension_multiplier / 10, 1.0))
 
+    # 1. Calculate Dynamic Scaling ---
+    # As tension rises, the "glow" should get larger AND more intense
+    dynamic_radius = 25 + (tension_multiplier * 5)  # Starts at 25, grows with oil price
+    
+    heat_data = []
+    for region, details in region_coords.items():
+        lat, lon, col = details
+        if col in df.columns:
+            # Get the raw baseline fatalities
+            base_val = df[col].mean()
+            
+            # Apply the multiplier to the intensity (weight)
+            # We use log scaling to prevent 500x spikes from breaking the visuals
+            current_tension = np.log1p(base_val * tension_multiplier) 
+            
+            heat_data.append([lat, lon, current_tension])
+
+    # --- 2. Render Map with Dynamic Radius ---
+    m = folium.Map(location=[20, 0], zoom_start=2, tiles='CartoDB dark_matter')
+    
+    if heat_data:
+        HeatMap(
+            data=heat_data,
+            radius=dynamic_radius,  # <--- This now changes with the slider
+            blur=15, 
+            min_opacity=0.4,
+            gradient={0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1: 'red'}
+        ).add_to(m)
+    
+    st_folium(m, width=1000, height=600, key="nexus_map")
+
 # --- RAW DATA PREVIEW ---
 with st.expander("View Master Feature Metadata"):
     st.dataframe(df.head(10))
