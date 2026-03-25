@@ -71,46 +71,58 @@ class SofieVisualizer:
         plt.close()
         return save_path
 
-    def generate_interactive_nexus(self, at_risk, friction, suffix=""):
-        """Generates a HeatMap by searching for any valid coordinate keys."""
+    ddef generate_interactive_nexus(self, at_risk, friction, suffix=""):
+        """
+        Upgraded interactive engine. 
+        Replaces static PNG logic with a dynamic Folium HeatMap.
+        """
         try:
             import folium
-            from folium.plugins import HeatMap
+            from folium.plugins import HeatMap, Fullscreen
             import os
 
-            m = folium.Map(location=[20, 0], zoom_start=2, tiles='CartoDB dark_matter')
-            heat_data = []
+            # 1. Setup the Map (Strategic Dark View)
+            m = folium.Map(
+                location=[20, 0], 
+                zoom_start=2, 
+                tiles='CartoDB dark_matter',
+                control_scale=True
+            )
 
+            # 2. Extract coordinates and intensity from your master data
+            heat_data = []
             if isinstance(at_risk, dict):
                 for region, data in at_risk.items():
-                    # 1. Flexible key searching for Coordinates
-                    lat = data.get('lat') or data.get('latitude') or data.get('y')
-                    lon = data.get('lon') or data.get('longitude') or data.get('x')
+                    # Attempt to find coordinates in the master schema
+                    lat = data.get('lat') or data.get('latitude')
+                    lon = data.get('lon') or data.get('longitude')
                     
-                    # 2. Flexible key searching for Tension Score
-                    weight = data.get('risk_score') or data.get('tension') or data.get('friction') or 1.0
-
+                    # Tension Weight: We'll prioritize conflict/fatalities from your parquet
+                    weight = data.get('risk_score') or data.get('acled_fatalities') or 1.0
+                    
                     if lat is not None and lon is not None:
                         heat_data.append([float(lat), float(lon), float(weight)])
 
-            # Debugging: Tell us if we actually found data
-            print(f"📊 Tension Map Debug: Processing {len(heat_data)} regions...")
-
+            # 3. Apply the 'Tension' Heat Layer
             if heat_data:
                 HeatMap(
                     data=heat_data,
-                    radius=30, 
-                    blur=15, 
+                    radius=20,
+                    blur=12,
                     min_opacity=0.3,
-                    gradient={0.4: 'blue', 0.6: 'lime', 1: 'red'}
+                    gradient={0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
                 ).add_to(m)
-            else:
-                print("⚠️ WARNING: No valid coordinates found in 'at_risk' data!")
+            
+            # 4. Add UI Features
+            Fullscreen(position='topright', title='Expand', title_cancel='Exit').add_to(m)
 
-            html_path = os.path.join(self.output_path, f"TENSION_MAP_{suffix}.html")
+            # 5. Export to HTML
+            html_path = os.path.join(self.output_path, f"GLOBAL_TENSION_DASHBOARD_{suffix}.html")
             m.save(html_path)
+            
+            print(f"🚀 INTERACTIVE UPGRADE COMPLETE: {html_path}")
             return html_path
 
         except Exception as e:
-            print(f"⚠️ Tension Engine Error: {e}")
+            print(f"⚠️ Interactive Engine Failure: {e}")
             return None
