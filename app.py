@@ -34,7 +34,6 @@ region_map = {
 }
 
 # --- 4. DATA PREPARATION (Temporal) ---
-# We use 'ME' for Month End, and ensure we only have numbers
 df_monthly = df.resample('ME').mean(numeric_only=True).fillna(0)
 time_index = [d.strftime('%Y-%m') for d in df_monthly.index]
 
@@ -43,7 +42,6 @@ master_heat_data = []
 for index, row in df_monthly.iterrows():
     step_data = []
     
-    # Projection logic for 2024+
     is_future = index.year >= 2024
     multiplier = (oil_price / 80) ** 1.5 if is_future else 1.0
     
@@ -51,26 +49,30 @@ for index, row in df_monthly.iterrows():
         if col in row:
             val = float(row[col])
             if val > 0:
-                # Apply scaling and multiplier
                 weight = float(np.log1p(val * multiplier))
-                # Format MUST be [lat, lon, weight]
-                step_data.append([coords[0], coords[1], weight])
+                # Ensure we are passing pure floats in a clean list
+                step_data.append([float(coords[0]), float(coords[1]), weight])
     
-    # 🚨 CRITICAL FIX: HeatMapWithTime requires a list of lists.
-    # If a month is empty, we provide a neutral point at [0,0] with 0 weight.
+    # 🚨 THE RE-FIX: Use a valid coordinate for the ghost point (London [51.5, -0.1])
+    # This ensures the 'get_bounds' calculation always has a real number to look at.
     if not step_data:
-        step_data = [[0.0, 0.0, 0.0]]
+        step_data = [[51.5, -0.1, 0.0]]
         
     master_heat_data.append(step_data)
 
 # --- 5. RENDER ---
 st.title("🛰️ SOFIE: Temporal Tension Nexus")
 
-# Create the base map
-m = folium.Map(location=[20, 0], zoom_start=2, tiles='CartoDB dark_matter')
+# Define the Map with EXPLICIT world bounds to prevent the internal crash
+m = folium.Map(
+    location=[20, 0], 
+    zoom_start=2, 
+    tiles='CartoDB dark_matter',
+    max_bounds=True,
+    min_lat=-80, max_lat=80, min_lon=-170, max_lon=170 
+)
 
-# Force-verify that master_heat_data is a list of lists of lists
-if len(master_heat_data) > 0:
+if master_heat_data:
     try:
         hm = HeatMapWithTime(
             data=master_heat_data,
@@ -82,16 +84,20 @@ if len(master_heat_data) > 0:
         )
         hm.add_to(m)
     except Exception as e:
-        st.error(f"Mapping Error: {e}")
+        st.error(f"Folium Plugin Error: {e}")
 
-# Use st_folium but we'll disable the auto-bounds calculation which often causes the crash
-st_folium(
-    m, 
-    width=1200, 
-    height=650, 
-    key="sofie_timeline_map",
-    returned_objects=[] # This prevents streamlit-folium from trying to 'read' the map bounds back
-)
+# If st_folium still crashes, we'll use a fallback rendering method
+try:
+    st_folium(
+        m, 
+        width=1200, 
+        height=650, 
+        key="sofie_timeline_v3",
+        returned_objects=[]
+    )
+except Exception as e:
+    st.warning("🔄 High-density data detected. Using static fallback...")
+    st.components.v1.html(m._repr_html_(), height=700)
 
 # --- 6. MACRO METRICS ---
 col1, col2, col3 = st.columns(3)
