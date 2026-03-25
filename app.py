@@ -8,13 +8,18 @@ import streamlit.components.v1 as components
 # --- 1. SETTINGS & THEME ---
 st.set_page_config(page_title="SOFIE | Strategic Command", layout="wide")
 
-# Custom CSS for the "Military SITREP" look
+# Corrected CSS for the "Military SITREP" look
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
-    .stMetric { background-color: #1a1c24; padding: 15px; border-radius: 10px; border-left: 5px solid #ff4b4b; }
+    div[data-testid="metric-container"] {
+        background-color: #1a1c24;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #ff4b4b;
+    }
     </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True) # Fixed: Changed from unsafe_allow_index
 
 # --- 2. DATA LOADERS ---
 @st.cache_data
@@ -26,7 +31,6 @@ def load_sofie_data():
 
 @st.cache_data
 def load_world_geojson():
-    # Standard GeoJSON for country boundaries
     url = "https://raw.githubusercontent.com/python-visualization/folium/master/examples/data/world-countries.json"
     return requests.get(url).json()
 
@@ -48,7 +52,6 @@ tab1, tab2, tab3 = st.tabs(["🌍 STRATEGIC SITREP", "📡 INTEL FEED", "📈 KI
 # CALCULATE GLOBAL RISK (Normalized to 100%)
 fatality_cols = [c for c in df.columns if 'FATALITIES' in c]
 raw_risk = df[fatality_cols].iloc[-1].mean()
-# Multiply by Oil Price delta (Base $80)
 oil_mult = (oil_price / 80) ** 1.5
 war_score = min(((raw_risk * oil_mult) / 10) * 100, 100.0)
 
@@ -58,8 +61,7 @@ war_score = min(((raw_risk * oil_mult) / 10) * 100, 100.0)
 with tab1:
     st.subheader("Global Kinetic Risk Distribution")
     
-    # Map logic: Match your ACLED regions to GeoJSON country names
-    # This creates a 'Heat' value per country based on your dataset
+    # Static Mapping for the SitRep look
     country_risk = pd.DataFrame({
         'name': ['Russia', 'Ukraine', 'Iran', 'China', 'United States of America', 'Sudan', 'Israel'],
         'risk_val': [95 * oil_mult, 100, 85 * oil_mult, 40 * oil_mult, 15, 90, 88]
@@ -73,14 +75,13 @@ with tab1:
         data=country_risk,
         columns=["name", "risk_val"],
         key_on="feature.properties.name",
-        fill_color="YlOrRd", # Yellow -> Orange -> Red
+        fill_color="YlOrRd", 
         fill_opacity=0.6,
         line_opacity=0.3,
         legend_name="KINETIC INTENSITY",
         nan_fill_color="#222222"
     ).add_to(m)
 
-    # Render as raw HTML to bypass streamlit-folium bugs
     components.html(m._repr_html_(), height=600)
 
 # ---------------------------------------------------------
@@ -97,10 +98,15 @@ with tab2:
         
         if res.get("articles"):
             for art in res["articles"][:10]:
-                with st.container(border=True):
+                with st.container():
                     col_a, col_b = st.columns([1, 4])
                     col_a.caption(art['publishedAt'][:10])
-                    col_a.error("HIGH RISK") if "war" in art['title'].lower() else col_a.warning("MONITOR")
+                    # Visual indicators for news importance
+                    if "war" in art['title'].lower() or "attack" in art['title'].lower():
+                        col_a.error("HIGH RISK")
+                    else:
+                        col_a.warning("MONITOR")
+                        
                     col_b.markdown(f"**{art['source']['name']}**: {art['title']}")
                     with col_b.expander("View Summary"):
                         st.write(art['description'])
@@ -118,12 +124,11 @@ with tab3:
     st.subheader("📊 Strategic Projections")
     
     c1, c2, c3 = st.columns(3)
-    c1.metric("War Danger Score", f"{war_score:.2f}%", delta=f"{oil_price-80}% Energy Pressure")
+    c1.metric("War Danger Score", f"{war_score:.2f}%", delta=f"{oil_price-80}% Pressure")
     c2.metric("Regional Stability", "VOLATILE" if war_score > 60 else "STABLE")
-    c3.metric("Live Intel Nodes", "1,280 Active")
+    c3.metric("Live Intel Nodes", f"{len(df.columns)} Active")
 
     st.progress(war_score / 100)
     
     st.write("### 5-Year Tension Projection (Oil-Weighted)")
-    # Show trend lines for your fatality columns
     st.line_chart(df[fatality_cols].tail(60) * oil_mult)
