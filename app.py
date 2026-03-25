@@ -70,17 +70,32 @@ with tab1:
 # ---------------------------------------------------------
 with tab2:
     st.subheader("📡 Live Signal Intelligence")
-    col_news, col_intel = st.columns([2, 1])
     
-    with col_news:
-        news_items = [
-            {"t": "02m ago", "c": "RED SEA", "msg": "Interception reported near Bab al-Mandab. Insurance premiums spiking."},
-            {"t": "14m ago", "c": "MACRO", "msg": f"Brent Crude futures testing sensitivity at ${oil_price} scenario."},
-            {"t": "1h ago", "c": "LOGISTICS", "msg": "Global supply chain pressure index (GSCPI) up 2.4%."},
-        ]
-        for n in news_items:
-            with st.chat_message("assistant"):
-                st.write(f"**[{n['t']}] {n['c']}** — {n['msg']}")
+    # 1. Access the secret key from your .streamlit/secrets.toml
+    try:
+        api_key = st.secrets["NEWS_API_KEY"]
+        
+        # 2. Setup the Request (Searching for conflict + geopolitics)
+        import requests
+        url = f'https://newsapi.org/v2/everything?q=conflict+OR+geopolitics&apiKey={api_key}&language=en&sortBy=publishedAt'
+        
+        response = requests.get(url)
+        data = response.json()
+
+        # 3. Display the results
+        if data.get("articles"):
+            for article in data["articles"][:10]: # Show latest 10
+                with st.expander(f"🛰️ {article['source']['name']}: {article['title']}"):
+                    st.write(f"**Published:** {article['publishedAt']}")
+                    st.write(article['description'])
+                    st.link_button("View Full Intel", article['url'])
+        else:
+            st.warning("No live signals found. Check your API key or query terms.")
+
+    except KeyError:
+        st.error("🔑 API Key Missing! Create `.streamlit/secrets.toml` with `NEWS_API_KEY = 'your_key'`")
+    except Exception as e:
+        st.error(f"Connection Error: {e}")
 
 # ---------------------------------------------------------
 # TAB 3: DANGER WAR SCORE
