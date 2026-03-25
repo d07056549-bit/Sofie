@@ -35,7 +35,7 @@ region_map = {
 
 # --- 4. DATA PREPARATION (Temporal) ---
 # We group data by Month to keep the map smooth
-df_monthly = df.resample('ME').mean()
+df_monthly = df.resample('ME').mean(numeric_only=True)
 time_index = [d.strftime('%Y-%m') for d in df_monthly.index]
 
 # Prepare the data for HeatMapWithTime
