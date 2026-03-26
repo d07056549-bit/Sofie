@@ -198,21 +198,63 @@ def main():
     print(f"Metadata saved to: {metadata_path}")
 
     # -----------------------------
-    # 2. Create master_schema.json
+    # 2. Create master_schema.json with Auto-Population
     # -----------------------------
     schema = {}
+    
+    # Define a helper to map keywords to descriptions/units
+    def get_metadata(col, source):
+        # Default values
+        desc, unit, note = f"Indicator for {col}", "Standard units", ""
+        
+        # ACLED Logic
+        if source == "acled":
+            if "FATALITIES" in col:
+                desc, unit = "Total reported fatalities from conflict events", "Count"
+            elif "EVENTS" in col:
+                desc, unit = "Total number of conflict events recorded", "Count"
+            elif "EVENT_TYPE" in col:
+                desc, unit = "The classification of the conflict event", "Category"
+            note = "Sourced from Armed Conflict Location & Event Data Project (ACLED)."
+
+        # Mobility Logic
+        elif source == "mobility":
+            unit = "Percent change (%)"
+            if "retail_and_recreation" in col:
+                desc = "Mobility trends for places like restaurants, cafes, and shopping centers"
+            elif "grocery_and_pharmacy" in col:
+                desc = "Mobility trends for grocery markets, food warehouses, and pharmacies"
+            note = "Baseline is the median value for the corresponding day of the week Jan 3–Feb 6, 2020."
+
+        # Geopolitical Risk (GPR)
+        elif source == "gpr":
+            unit = "Index Points"
+            desc = "Frequency of articles related to geopolitical tensions in leading newspapers"
+            note = "Based on Caldara and Iacoviello methodology."
+
+        # Yearly/Monthly suffixes
+        if "_yearly" in col:
+            note += " Forward-filled from yearly source."
+        elif "_monthly" in col:
+            note += " Forward-filled from monthly source."
+
+        return desc, unit, note
+
     for col in spine.columns:
+        source_prefix = col.split("_")[0]
+        desc, unit, note = get_metadata(col, source_prefix)
+        
         schema[col] = {
             "dtype": str(spine[col].dtype),
-            "source": col.split("_")[0],  # prefix-based inference
-            "description": "",
-            "units": "",
-            "notes": ""
+            "source": source_prefix,
+            "description": desc,
+            "units": unit,
+            "notes": note
         }
 
+    import json
     with open(schema_path, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=4)
-
     print(f"Schema saved to: {schema_path}")
 
     # -----------------------------
