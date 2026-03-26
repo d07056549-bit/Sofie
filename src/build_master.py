@@ -134,7 +134,7 @@ def main():
         "columns": len(spine.columns),
         "date_range": {"start": str(spine.index.min().date()), "end": str(spine.index.max().date())}
     }
-    with open(out_dir / "master_metadata.json", "w") as f:
+    with open(out_dir / "master_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=4)
 
     # 4. Generate Schema JSON (Accesses 'spine' inside main)
@@ -149,11 +149,11 @@ def main():
             "units": unit,
             "notes": note
         }
-    with open(out_dir / "master_schema.json", "w") as f:
+    with open(out_dir / "master_schema.json", "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=4)
 
     # 5. Generate Feature List
-    with open(out_dir / "master_feature_list.txt", "w") as f:
+    with open(out_dir / "master_feature_list.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(spine.columns))
 
     print("Documentation generated successfully.")
