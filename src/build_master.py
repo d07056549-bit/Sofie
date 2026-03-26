@@ -203,7 +203,7 @@ def main():
     schema = {}
     
     # Define a helper to map keywords to descriptions/units
-    def get_metadata(col, source):
+def get_metadata(col, source):
     # Default values for any feature not explicitly caught
     desc, unit, note = f"Indicator for {col}", "Standard units", ""
     
