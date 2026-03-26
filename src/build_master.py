@@ -204,41 +204,69 @@ def main():
     
     # Define a helper to map keywords to descriptions/units
     def get_metadata(col, source):
-        # Default values
-        desc, unit, note = f"Indicator for {col}", "Standard units", ""
-        
-        # ACLED Logic
-        if source == "acled":
-            if "FATALITIES" in col:
-                desc, unit = "Total reported fatalities from conflict events", "Count"
-            elif "EVENTS" in col:
-                desc, unit = "Total number of conflict events recorded", "Count"
-            elif "EVENT_TYPE" in col:
-                desc, unit = "The classification of the conflict event", "Category"
-            note = "Sourced from Armed Conflict Location & Event Data Project (ACLED)."
+    # Default values for any feature not explicitly caught
+    desc, unit, note = f"Indicator for {col}", "Standard units", ""
+    
+    # 1. ACLED Conflict Data (Weekly & Monthly) 
+    if "acled" in source:
+        if "FATALITIES" in col:
+            desc, unit = "Total reported fatalities from conflict events", "Count"
+        elif "EVENTS" in col:
+            desc, unit = "Total number of conflict events recorded", "Count"
+        elif "EVENT_TYPE" in col:
+            desc, unit = "Classification of the conflict event", "Category"
+        note = "Sourced from Armed Conflict Location & Event Data Project (ACLED)."
 
-        # Mobility Logic
-        elif source == "mobility":
-            unit = "Percent change (%)"
-            if "retail_and_recreation" in col:
-                desc = "Mobility trends for places like restaurants, cafes, and shopping centers"
-            elif "grocery_and_pharmacy" in col:
-                desc = "Mobility trends for grocery markets, food warehouses, and pharmacies"
-            note = "Baseline is the median value for the corresponding day of the week Jan 3–Feb 6, 2020."
+    # 2. Geopolitical Risk Index (GPR) 
+    elif source == "gpr" or "geopolitical_risk" in col:
+        unit = "Index Points"
+        if "SHARE" in col:
+            unit = "Percentage (%)"
+            desc = "Share of newspaper articles related to geopolitical risk"
+        elif "GPRC" in col:
+            desc = f"Country-specific Geopolitical Risk Index for {col.split('_')[-1]}"
+        else:
+            desc = "Global Geopolitical Risk Index based on newspaper coverage"
+        note = "Based on Caldara and Iacoviello methodology."
 
-        # Geopolitical Risk (GPR)
-        elif source == "gpr":
-            unit = "Index Points"
-            desc = "Frequency of articles related to geopolitical tensions in leading newspapers"
-            note = "Based on Caldara and Iacoviello methodology."
+    # 3. Migration & Refugee Flows (UNHCR) [cite: 19]
+    elif "migration_&_refugee_flows" in col:
+        unit = "Count (Persons)"
+        if "asylum_seekers" in col:
+            desc = "Data regarding asylum applications and decisions"
+        elif "demographics" in col:
+            desc = "Refugee population breakdown by age and gender"
+        elif "persons_of_concern" in col:
+            desc = "Total population of refugees, IDPs, and stateless persons"
+        note = "Sourced from UNHCR Refugee Data Finder."
 
-        # Yearly/Monthly suffixes
-        if "_yearly" in col:
-            note += " Forward-filled from yearly source."
-        elif "_monthly" in col:
-            note += " Forward-filled from monthly source."
+    # 4. Environmental & CO2 Indicators (OWID) [cite: 19]
+    elif "annual-co2" in col or "co-emissions" in col:
+        if "per-capita" in col:
+            desc, unit = "Annual CO2 emissions per person", "Tonnes per capita"
+        else:
+            desc, unit = "Total annual CO2 emissions by country", "Tonnes"
+        note = "Sourced from Our World in Data (OWID)."
 
-        return desc, unit, note
+    # 5. Natural Disaster Data [cite: 19]
+    elif "natural-disasters" in col:
+        desc = "Decadal average death rates from natural disasters"
+        unit = "Deaths per 100,000 people"
+        note = "Includes droughts, floods, earthquakes, and storms."
+
+    # 6. Global Mobility (Google) 
+    elif "mobility" in source:
+        unit = "Percent change (%)"
+        desc = "Change in visitor volume compared to Jan-Feb 2020 baseline"
+        note = "Covers retail, grocery, parks, transit, and workplaces."
+
+    # Apply notes for temporal frequency based on your merge logic 
+    if "_yearly" in col:
+        note += " Forward-filled from yearly source data."
+    elif "_monthly" in col:
+        note += " Forward-filled from monthly source data."
+
+    return desc, unit, note
 
     for col in spine.columns:
         source_prefix = col.split("_")[0]
