@@ -204,81 +204,66 @@ def main():
     
     # Define a helper to map keywords to descriptions/units
 def get_metadata(col, source):
-    # Default values for any feature not explicitly caught
+    # This block is now correctly indented with 4 spaces
     desc, unit, note = f"Indicator for {col}", "Standard units", ""
     
-    # 1. ACLED Conflict Data (Weekly & Monthly) 
+    # 1. ACLED (Conflict Events & Fatalities)
     if "acled" in source:
+        note = "Sourced from Armed Conflict Location & Event Data Project (ACLED)."
         if "FATALITIES" in col:
             desc, unit = "Total reported fatalities from conflict events", "Count"
         elif "EVENTS" in col:
             desc, unit = "Total number of conflict events recorded", "Count"
         elif "EVENT_TYPE" in col:
             desc, unit = "Classification of the conflict event", "Category"
-        note = "Sourced from Armed Conflict Location & Event Data Project (ACLED)."
+            
+    # 2. UCDP (Uppsala Conflict Data Program)
+    elif "ucdp" in source:
+        note = "Sourced from Uppsala Conflict Data Program (UCDP)."
+        if "intensity_level" in col:
+            desc, unit = "Conflict intensity level (e.g., minor vs war)", "Ordinal Scale"
+        elif "side_a" in col or "side_b" in col:
+            desc, unit = "Participants or parties involved in the conflict", "Entity Name"
 
-    # 2. Geopolitical Risk Index (GPR) 
-    elif source == "gpr" or "geopolitical_risk" in col:
+    # 3. Geopolitical Risk (GPR)
+    elif "gpr" in source or "geopolitical" in source:
         unit = "Index Points"
+        desc = "Frequency of news articles related to geopolitical tensions"
+        note = "Based on Caldara and Iacoviello methodology."
         if "SHARE" in col:
             unit = "Percentage (%)"
-            desc = "Share of newspaper articles related to geopolitical risk"
-        elif "GPRC" in col:
-            desc = f"Country-specific Geopolitical Risk Index for {col.split('_')[-1]}"
-        else:
-            desc = "Global Geopolitical Risk Index based on newspaper coverage"
-        note = "Based on Caldara and Iacoviello methodology."
 
-    # 3. Migration & Refugee Flows (UNHCR) [cite: 19]
-    elif "migration_&_refugee_flows" in col:
-        unit = "Count (Persons)"
-        if "asylum_seekers" in col:
-            desc = "Data regarding asylum applications and decisions"
-        elif "demographics" in col:
-            desc = "Refugee population breakdown by age and gender"
-        elif "persons_of_concern" in col:
-            desc = "Total population of refugees, IDPs, and stateless persons"
-        note = "Sourced from UNHCR Refugee Data Finder."
-
-    # 4. Environmental & CO2 Indicators (OWID) [cite: 19]
-    elif "annual-co2" in col or "co-emissions" in col:
-        if "per-capita" in col:
-            desc, unit = "Annual CO2 emissions per person", "Tonnes per capita"
-        else:
-            desc, unit = "Total annual CO2 emissions by country", "Tonnes"
-        note = "Sourced from Our World in Data (OWID)."
-
-    # 5. Natural Disaster Data [cite: 19]
-    elif "natural-disasters" in col:
-        desc = "Decadal average death rates from natural disasters"
-        unit = "Deaths per 100,000 people"
-        note = "Includes droughts, floods, earthquakes, and storms."
-
-    # 6. Global Mobility (Google) 
+    # 4. Mobility (Google Community Mobility Reports)
     elif "mobility" in source:
         unit = "Percent change (%)"
-        desc = "Change in visitor volume compared to Jan-Feb 2020 baseline"
-        note = "Covers retail, grocery, parks, transit, and workplaces."
+        note = "Baseline: median value for the corresponding day Jan 3–Feb 6, 2020."
+        if "retail" in col:
+            desc = "Mobility trends for restaurants, cafes, and shopping centers"
+        elif "grocery" in col:
+            desc = "Mobility trends for grocery markets and pharmacies"
 
-    # Apply notes for temporal frequency based on your merge logic 
-    if "_yearly" in col:
-        note += " Forward-filled from yearly source data."
-    elif "_monthly" in col:
-        note += " Forward-filled from monthly source data."
+    # 5. World Bank & Socio-Economic (OWID, UNHCR)
+    elif "world" in source or "co2" in col or "refugee" in col:
+        desc = f"Socio-economic indicator: {col.split('_')[-1].replace('-', ' ')}"
+        if "yearly" in col:
+            note = "Sourced from World Bank/OWID; forward-filled to weekly frequency."
 
     return desc, unit, note
 
-    for col in spine.columns:
-        source_prefix = col.split("_")[0]
-        desc, unit, note = get_metadata(col, source_prefix)
-        
-        schema[col] = {
-            "dtype": str(spine[col].dtype),
-            "source": source_prefix,
-            "description": desc,
-            "units": unit,
-            "notes": note
-        }
+# Generate the schema
+schema = {}
+for col in spine.columns:
+    # Prefix-based inference as seen in your feature list
+    source_prefix = col.split("_")[0]
+    desc, unit, note = get_metadata(col, source_prefix)
+    
+    schema[col] = {
+        "dtype": str(spine[col].dtype),
+        "source": source_prefix,
+        "description": desc,
+        "units": unit,
+        "notes": note
+    }
 
     import json
     with open(schema_path, "w", encoding="utf-8") as f:
